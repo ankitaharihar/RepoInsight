@@ -20,8 +20,10 @@
   "homepage": "https://github.com/ankitaharihar/Github-profile-analysis-tool#readme",
   "dependencies": {
     "axios": "^1.13.6",
+    "chart.js": "^4.5.1",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "react-chartjs-2": "^5.3.1"
   }
 }
