@@ -1,24 +1,31 @@
 import { useState } from "react";
 import axios from "axios";
 
-export default function FileExplorer({ files, onFileClick, activeFile }) {
+export default function FileExplorer({ files, onFileClick }) {
   return (
     <div>
       {files.map((file) => (
-        <Node
-          key={file.path}
-          file={file}
-          onFileClick={onFileClick}
-          activeFile={activeFile}
-        />
+        <Node key={file.path} file={file} onFileClick={onFileClick} />
       ))}
     </div>
   );
 }
 
-function Node({ file, onFileClick, activeFile }) {
+function Node({ file, onFileClick }) {
   const [open, setOpen] = useState(false);
   const [children, setChildren] = useState([]);
+
+  const getIcon = (name, type) => {
+    if (type === "dir") return open ? "📂" : "📁";
+
+    if (name.endsWith(".js")) return "🟨";
+    if (name.endsWith(".html")) return "🟧";
+    if (name.endsWith(".css")) return "🟦";
+    if (name.endsWith(".json")) return "🟫";
+    if (name.endsWith(".md")) return "📘";
+
+    return "📄";
+  };
 
   const handleClick = async () => {
     if (file.type === "file") {
@@ -38,21 +45,19 @@ function Node({ file, onFileClick, activeFile }) {
     <div className="ml-2">
       <div
         onClick={handleClick}
-        className={`cursor-pointer px-2 py-1 rounded ${
-          activeFile === file.name ? "bg-gray-700" : "hover:bg-gray-800"
-        }`}
+        className="cursor-pointer px-2 py-1 rounded hover:bg-gray-800 text-sm flex items-center gap-2"
       >
-        {file.type === "dir" ? (open ? "📂" : "📁") : "📄"} {file.name}
+        <span>{getIcon(file.name, file.type)}</span>
+        <span>{file.name}</span>
       </div>
 
       {open && children.length > 0 && (
-        <div className="ml-4 border-l pl-2">
+        <div className="ml-4 border-l border-gray-700 pl-2">
           {children.map((child) => (
             <Node
               key={child.path}
               file={child}
               onFileClick={onFileClick}
-              activeFile={activeFile}
             />
           ))}
         </div>
