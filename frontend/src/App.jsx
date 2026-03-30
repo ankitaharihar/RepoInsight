@@ -75,7 +75,7 @@ export default function App() {
   
 };
   return (
-    <div className="min-h-screen bg-[#020617] text-white px-6 py-8">
+   <div className="min-h-screen bg-[#020617] text-white">
 
       {/* 🔥 TITLE */}
       <h1 className="text-4xl text-center font-bold bg-gradient-to-r from-indigo-400 to-pink-400 bg-clip-text text-transparent mb-6">
@@ -140,19 +140,17 @@ export default function App() {
               {/* SCORE + STATS */}
               <div className="grid md:grid-cols-4 gap-6 mb-8">
                 
-                <div className="bg-gradient-to-r from-indigo-600/20 to-purple-600/20 
-p-5 rounded-2xl border border-white/10">
+              <div className="col-span-2 p-6 rounded-2xl 
+bg-gradient-to-r from-indigo-600 to-purple-600 
+shadow-xl shadow-indigo-500/30">
 
-  <p className="text-sm text-gray-400">Developer Score</p>
+  <p className="text-sm opacity-80">Developer Score</p>
 
-  <h2 className="text-4xl font-bold mt-2">{score}</h2>
+  <h1 className="text-4xl font-bold mt-2">{score}</h1>
 
-  <p className="text-sm text-indigo-400 mt-1">
-    {level}
+  <p className="text-sm mt-1 opacity-80">
+    {level} • out of 100
   </p>
-
-  <p className="text-xs text-gray-500">out of 100</p>
-
 </div>
 
                 <div className="p-6 rounded-2xl bg-[#0f172a]/60 border border-white/10">
