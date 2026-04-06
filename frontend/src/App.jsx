@@ -127,9 +127,9 @@ export default function App() {
     setLoading(true);
     try {
       const [profileRes, repoRes] = await Promise.all([
-        axios.get(`http://localhost:5000/api/github/${username}`),
-        axios.get(`https://api.github.com/users/${username}/repos?per_page=100`)
-      ]);
+  axios.get(`/.netlify/functions/github?username=${username}`),
+  axios.get(`https://api.github.com/users/${username}/repos?per_page=100`)
+]);
 
       setProfile(profileRes.data);
       setRepos(repoRes.data || []);
