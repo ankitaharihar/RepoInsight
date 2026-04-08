@@ -23,7 +23,7 @@ export default function RepoModal({
           <button onClick={onClose}>✕</button>
         </div>
 
-        <div className="flex h-[520px]">
+        <div className="flex h-130">
 
           {/* Sidebar */}
           <div className="w-1/3 border-r border-gray-800 p-2 overflow-y-auto">

@@ -212,164 +212,199 @@ export default function App() {
   const score = calculateScore(profile, repos);
   const level = getLevel(score);
 
-  return (
-    <div className="min-h-screen bg-[#020617] px-6 py-10 text-white">
-      <div className="mx-auto mb-6 flex w-full max-w-6xl items-center justify-between rounded-2xl border border-white/10 bg-[#0f172a]/90 px-4 py-3 shadow-xl shadow-black/30 backdrop-blur">
-        <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-gray-400">Home</p>
-          <h2 className="text-sm font-semibold text-gray-100">
-            Search profiles, open history, and reuse past searches
-          </h2>
-          {authUser && (
-            <p className="mt-1 text-xs text-emerald-300">
-              Signed in as {authUser.name || authUser.login || authUser.email}
-              {authUser.provider ? ` via ${authUser.provider}` : ""}
-            </p>
-          )}
-        </div>
+  const recentProfileCards = [
+    {
+      name: "torvalds",
+      meta: "1.2M commits • 45 repos",
+      avatar: "👨‍💻",
+    },
+    {
+      name: "gaearon",
+      meta: "89K commits • 234 repos",
+      avatar: "🧑‍💼",
+    },
+    {
+      name: "sindresorhus",
+      meta: "156K commits • 1100 repos",
+      avatar: "👨‍💻",
+    },
+  ];
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => authUser && setShowHistory((value) => !value)}
-            disabled={!authUser}
-            className={`rounded-full border px-4 py-2 text-sm transition ${
-              authUser
-                ? "border-white/10 bg-white/5 hover:bg-white/10"
-                : "cursor-not-allowed border-white/5 bg-white/5 text-gray-500"
+  return (
+    <div className="app-shell min-h-screen px-4 py-4 text-white md:px-6 md:py-5">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-12">
+        <header className="nav-shell flex items-center justify-between gap-4 rounded-[1.75rem] border border-white/10 px-4 py-3 md:px-5">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="brand-mark">
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="brand-mark__icon">
+                <path
+                  fill="currentColor"
+                  d="M12 2C6.48 2 2 6.58 2 12.26c0 4.53 2.87 8.37 6.84 9.73.5.1.68-.22.68-.48 0-.24-.01-.88-.02-1.72-2.78.62-3.37-1.38-3.37-1.38-.45-1.18-1.11-1.49-1.11-1.49-.91-.64.07-.63.07-.63 1 .07 1.53 1.06 1.53 1.06.9 1.58 2.36 1.12 2.94.86.09-.67.35-1.12.64-1.38-2.22-.26-4.56-1.15-4.56-5.12 0-1.13.39-2.06 1.03-2.79-.1-.27-.45-1.34.1-2.78 0 0 .84-.27 2.75 1.06A9.3 9.3 0 0 1 12 6.85c.85 0 1.71.12 2.51.35 1.91-1.33 2.75-1.06 2.75-1.06.55 1.44.2 2.51.1 2.78.64.73 1.03 1.66 1.03 2.79 0 3.98-2.34 4.86-4.57 5.11.36.32.68.94.68 1.9 0 1.37-.01 2.48-.01 2.82 0 .27.18.59.69.48A10.27 10.27 0 0 0 22 12.26C22 6.58 17.52 2 12 2Z"
+                />
+              </svg>
+            </div>
+            <div className="min-w-0">
+              <div className="truncate text-lg font-semibold text-sky-300 md:text-xl">
+                GitHub Intelligence
+              </div>
+              <div className="truncate text-xs text-slate-400 md:text-sm">
+                Professional Analytics Platform
+              </div>
+            </div>
+          </div>
+
+          <nav className="hidden items-center gap-10 text-sm font-semibold text-slate-400 lg:flex">
+            <a href="#">Features</a>
+            <a href="#">Pricing</a>
+            <a href="#">Documentation</a>
+          </nav>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => authUser && setShowHistory((value) => !value)}
+              disabled={!authUser}
+              className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                authUser
+                  ? "text-slate-200 hover:bg-white/5"
+                  : "cursor-not-allowed text-slate-500"
+              }`}
+            >
+              <span>↺</span>
+              <span>History</span>
+            </button>
+
+            {authUser ? (
+              <button
+                onClick={handleSignOut}
+                className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white hover:bg-white/10"
+              >
+                Sign Out
+              </button>
+            ) : (
+              <button
+                onClick={() => startOAuthLogin("github")}
+                disabled={!oauthConfig.github}
+                className="login-pill rounded-full px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                Login <span className="ml-1 text-xs">⌄</span>
+              </button>
+            )}
+          </div>
+        </header>
+
+        {loginNotice && (
+          <div
+            className={`mx-auto w-full max-w-6xl rounded-2xl border px-4 py-3 text-sm ${
+              loginNotice.type === "error"
+                ? "border-red-500/20 bg-red-500/10 text-red-200"
+                : "border-emerald-500/20 bg-emerald-500/10 text-emerald-200"
             }`}
           >
-            {showHistory ? "Close history" : "History"}
-          </button>
-
-          {authUser ? (
-            <button
-              onClick={handleSignOut}
-              className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm hover:bg-white/10"
-            >
-              Sign Out
-            </button>
-          ) : (
-            <button
-              onClick={() => startOAuthLogin("github")}
-              className="rounded-full bg-linear-to-r from-indigo-500 to-purple-500 px-4 py-2 text-sm font-medium shadow-lg shadow-indigo-500/20"
-            >
-              Login
-            </button>
-          )}
-        </div>
-      </div>
-
-      {loginNotice && (
-        <div
-          className={`mx-auto mb-6 w-full max-w-6xl rounded-2xl border px-4 py-3 text-sm ${
-            loginNotice.type === "error"
-              ? "border-red-500/20 bg-red-500/10 text-red-200"
-              : "border-emerald-500/20 bg-emerald-500/10 text-emerald-200"
-          }`}
-        >
-          {loginNotice.text}
-        </div>
-      )}
-
-      <h1 className="mb-6 text-center text-4xl font-bold bg-linear-to-r from-indigo-400 to-pink-400 bg-clip-text text-transparent">
-        GitHub Intelligence Pro
-      </h1>
-
-      {!authUser && (
-        <div className="mx-auto mb-8 w-full max-w-4xl rounded-3xl border border-white/10 bg-[#0f172a]/80 p-6 shadow-2xl shadow-black/30">
-          <div className="mb-4">
-            <p className="text-xs uppercase tracking-[0.3em] text-gray-500">Sign In</p>
-            <h3 className="mt-2 text-2xl font-semibold text-white">
-              Choose a provider to continue
-            </h3>
-            <p className="mt-2 text-sm text-gray-400">
-              Real OAuth login from GitHub, Google, or LinkedIn. Login ke baad history aur search unlock hoga.
-            </p>
-          </div>
-
-          <div className="mb-4 flex flex-wrap gap-2 text-xs">
-            <span className={`rounded-full px-3 py-1 ${oauthConfig.github ? "bg-emerald-500/15 text-emerald-300" : "bg-red-500/15 text-red-300"}`}>
-              GitHub {oauthConfig.github ? "ready" : "not configured"}
-            </span>
-            <span className={`rounded-full px-3 py-1 ${oauthConfig.google ? "bg-emerald-500/15 text-emerald-300" : "bg-red-500/15 text-red-300"}`}>
-              Google {oauthConfig.google ? "ready" : "not configured"}
-            </span>
-            <span className={`rounded-full px-3 py-1 ${oauthConfig.linkedin ? "bg-emerald-500/15 text-emerald-300" : "bg-red-500/15 text-red-300"}`}>
-              LinkedIn {oauthConfig.linkedin ? "ready" : "not configured"}
-            </span>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-3">
-            <button
-              onClick={() => startOAuthLogin("github")}
-              disabled={!oauthConfig.github}
-              className="rounded-2xl border border-white/10 bg-[#111827] px-4 py-4 text-left hover:border-indigo-400/40 hover:bg-[#172033] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <div className="text-sm font-semibold text-white">Continue with GitHub</div>
-              <div className="mt-1 text-xs text-gray-400">{oauthConfig.github ? "Developer login" : "Not configured yet"}</div>
-            </button>
-
-            <button
-              onClick={() => startOAuthLogin("google")}
-              disabled={!oauthConfig.google}
-              className="rounded-2xl border border-white/10 bg-[#111827] px-4 py-4 text-left hover:border-indigo-400/40 hover:bg-[#172033] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <div className="text-sm font-semibold text-white">Continue with Google</div>
-              <div className="mt-1 text-xs text-gray-400">{oauthConfig.google ? "Fast account access" : "Not configured yet"}</div>
-            </button>
-
-            <button
-              onClick={() => startOAuthLogin("linkedin")}
-              disabled={!oauthConfig.linkedin}
-              className="rounded-2xl border border-white/10 bg-[#111827] px-4 py-4 text-left hover:border-indigo-400/40 hover:bg-[#172033] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <div className="text-sm font-semibold text-white">Continue with LinkedIn</div>
-              <div className="mt-1 text-xs text-gray-400">{oauthConfig.linkedin ? "Professional profile login" : "Not configured yet"}</div>
-            </button>
-          </div>
-
-          {!oauthConfig.github || !oauthConfig.google || !oauthConfig.linkedin ? (
-            <p className="mt-4 text-xs text-amber-300">
-              OAuth clients are not configured yet. Fill backend `.env` and restart the server.
-            </p>
-          ) : null}
-        </div>
-      )}
-
-      <div className="relative mb-10 flex flex-col items-center gap-3">
-        <div className="flex gap-3">
-          <input
-            value={username}
-            onChange={(event) => {
-              setUsername(event.target.value);
-              if (authUser) {
-                fetchSuggestions(event.target.value);
-              }
-            }}
-            onFocus={() => authUser && setShowDropdown(true)}
-            onKeyDown={(event) => event.key === "Enter" && analyzeProfile()}
-            placeholder="Enter GitHub username"
-            disabled={!authUser}
-            className="w-96 rounded-lg border border-white/10 bg-[#1e293b] px-4 py-2 disabled:cursor-not-allowed disabled:opacity-60"
-          />
-
-          <button
-            onClick={() => analyzeProfile()}
-            disabled={!authUser}
-            className="rounded-lg bg-linear-to-r from-indigo-500 to-purple-500 px-5 py-2 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {loading ? "Loading..." : "Analyze"}
-          </button>
-        </div>
-
-        {!authUser && (
-          <div className="w-full max-w-4xl rounded-2xl border border-dashed border-white/10 bg-[#0f172a]/40 p-4 text-sm text-gray-300">
-            Search aur history use karne ke liye pehle login karo.
+            {loginNotice.text}
           </div>
         )}
 
+        <section className="hero-panel relative overflow-hidden rounded-4xl px-4 py-12 text-center md:px-8 md:py-20">
+          <div className="hero-grid" aria-hidden="true" />
+          <div className="hero-orb hero-orb--left" aria-hidden="true" />
+          <div className="hero-orb hero-orb--right" aria-hidden="true" />
+
+          <div className="relative z-10 mx-auto flex max-w-5xl flex-col items-center">
+            <div className="hero-badge mb-10 inline-flex items-center gap-2 rounded-full border border-white/10 px-5 py-2 text-sm font-medium text-violet-200 shadow-lg shadow-violet-500/10">
+              <span className="text-lg text-violet-300">✦</span>
+              <span>Powered by Advanced AI Analytics</span>
+              <span className="text-lg text-violet-300">✦</span>
+            </div>
+
+            <h1 className="hero-heading max-w-5xl text-balance font-extrabold leading-[0.88] tracking-tight">
+              <span className="hero-heading__top block text-white/90">Unlock the Power of</span>
+              <span className="hero-heading__bottom block">GitHub Intelligence</span>
+            </h1>
+
+            <p className="mt-9 max-w-4xl text-base leading-8 text-slate-300 md:text-[1.45rem] md:leading-[2.2rem]">
+              Analyze profiles, track contributions, and gain deep insights into GitHub repositories with our advanced analytics platform.
+            </p>
+
+            <div className="mt-12 w-full max-w-5xl rounded-[1.8rem] border border-fuchsia-500/30 bg-[#1a2337]/95 p-3 shadow-[0_0_32px_rgba(236,72,153,0.38)] md:p-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-stretch">
+                <div className="relative flex-1">
+                  <span className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-slate-500">⌕</span>
+                  <input
+                    value={username}
+                    onChange={(event) => {
+                      setUsername(event.target.value);
+                      if (authUser) {
+                        fetchSuggestions(event.target.value);
+                      }
+                    }}
+                    onFocus={() => authUser && setShowDropdown(true)}
+                    onKeyDown={(event) => event.key === "Enter" && analyzeProfile()}
+                    placeholder="Enter GitHub username (e.g., torvalds)"
+                    disabled={!authUser}
+                    className="hero-input h-16 w-full rounded-2xl border border-white/5 bg-[#24314a] pl-14 pr-4 text-base text-slate-100 placeholder:text-slate-500 outline-none disabled:cursor-not-allowed disabled:opacity-60 md:h-16"
+                  />
+                </div>
+
+                <button
+                  onClick={() => analyzeProfile()}
+                  disabled={!authUser}
+                  className="hero-analyze-btn h-16 rounded-2xl px-8 text-base font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 md:h-16 md:w-44"
+                >
+                  <span className="mr-2">⚡</span>
+                  Analyze
+                </button>
+              </div>
+
+              <p className="mt-5 text-sm text-slate-400 md:text-base">
+                Get detailed analytics, contribution graphs, and repository insights
+              </p>
+
+              {showDropdown && suggestions.length > 0 && authUser && (
+                <div className="mt-4 overflow-hidden rounded-[1.2rem] border border-white/10 bg-[#111827] text-left shadow-2xl shadow-black/50">
+                  {suggestions.map((user) => (
+                    <div
+                      key={user.id}
+                      onClick={() => {
+                        setUsername(user.login);
+                        setShowDropdown(false);
+                        analyzeProfile(user.login);
+                      }}
+                      className="flex cursor-pointer items-center gap-3 px-4 py-3 transition hover:bg-white/5"
+                    >
+                      <img src={user.avatar_url} className="h-9 w-9 rounded-full" />
+                      <p className="text-sm text-slate-200">{user.login}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {!authUser && (
+                <div className="mt-6 text-sm text-slate-400">
+                  Sign in to use search and history.
+                </div>
+              )}
+            </div>
+
+            <div className="mt-9 text-sm text-slate-400 md:text-base">
+              Recently searched profiles:
+            </div>
+
+            <div className="mt-5 grid w-full max-w-5xl gap-4 md:grid-cols-3">
+              {recentProfileCards.map((item) => (
+                <div key={item.name} className="recent-card flex items-center gap-4 rounded-2xl border border-white/10 px-4 py-4 text-left">
+                  <div className="recent-card__avatar">{item.avatar}</div>
+                  <div className="min-w-0">
+                    <div className="truncate text-base font-semibold text-white">{item.name}</div>
+                    <div className="truncate text-xs text-slate-400">{item.meta}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {authUser && showHistory && history.length > 0 && (
-          <div className="w-full max-w-4xl rounded-2xl border border-white/10 bg-[#0f172a]/70 p-4">
+          <div className="mx-auto w-full max-w-5xl rounded-2xl border border-white/10 bg-white/5 p-4">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-sm font-semibold tracking-wide text-gray-200">
                 Recent searches
@@ -395,29 +430,11 @@ export default function App() {
         )}
 
         {authUser && showHistory && history.length === 0 && (
-          <div className="w-full max-w-4xl rounded-2xl border border-dashed border-white/10 bg-[#0f172a]/40 p-4 text-sm text-gray-400">
+          <div className="mx-auto w-full max-w-5xl rounded-2xl border border-dashed border-white/10 bg-white/5 p-4 text-sm text-gray-400">
             No search history yet.
           </div>
         )}
 
-        {showDropdown && suggestions.length > 0 && authUser && (
-          <div className="absolute top-20 z-50 w-96 rounded-xl border border-white/10 bg-[#0f172a] shadow-lg">
-            {suggestions.map((user) => (
-              <div
-                key={user.id}
-                onClick={() => {
-                  setUsername(user.login);
-                  setShowDropdown(false);
-                  analyzeProfile(user.login);
-                }}
-                className="flex cursor-pointer items-center gap-3 p-3 hover:bg-indigo-500/20"
-              >
-                <img src={user.avatar_url} className="h-8 w-8 rounded-full" />
-                <p className="text-sm text-gray-300">{user.login}</p>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       {profile && (
