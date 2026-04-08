@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import axios from "axios";
 
 import {
@@ -44,13 +44,13 @@ export default function App() {
 
   const [suggestions, setSuggestions] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [history, setHistory] = useState([]);
-
-  // 🔥 LOAD HISTORY
-  useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem("history")) || [];
-    setHistory(stored);
-  }, []);
+  const [history, setHistory] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("history")) || [];
+    } catch {
+      return [];
+    }
+  });
 
   // 🔍 SUGGESTIONS
   const fetchSuggestions = async (value) => {
