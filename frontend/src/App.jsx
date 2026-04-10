@@ -309,7 +309,7 @@ export default function App() {
     },
     {
       key: "google",
-      label: "Continue with Google",
+      label: "Sign in with Google",
       subtitle: "Use your Google account securely",
     },
     {
@@ -583,8 +583,21 @@ export default function App() {
               )}
 
               {!authUser && (
-                <div className="mt-4 text-sm text-slate-400">
-                  Sign in to save and view search history.
+                <div className="mt-4 space-y-3">
+                  <div className="text-sm text-slate-400">
+                    Sign in to save and view search history.
+                  </div>
+
+                  {oauthConfig.google && (
+                    <button
+                      type="button"
+                      onClick={() => startOAuthLogin("google")}
+                      className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/10"
+                    >
+                      <span className="h-2.5 w-2.5 rounded-full bg-rose-400" />
+                      <span>Sign in with Google</span>
+                    </button>
+                  )}
                 </div>
               )}
             </div>
