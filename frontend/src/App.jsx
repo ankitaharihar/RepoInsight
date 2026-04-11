@@ -11,6 +11,37 @@ import {
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 const TRENDING_USERS = ["torvalds", "gaearon", "sindresorhus", "yyx990803", "vercel"];
 
+const escapeCsvCell = (value) => {
+  const raw = value == null ? "" : String(value);
+  return `"${raw.replace(/"/g, '""')}"`;
+};
+
+const buildRepoCsv = (repoList = []) => {
+  const header = [
+    "name",
+    "language",
+    "stars",
+    "forks",
+    "open_issues",
+    "updated_at",
+    "html_url",
+  ];
+
+  const rows = repoList.map((repo) => [
+    repo.name,
+    repo.language || "Unknown",
+    repo.stargazers_count ?? 0,
+    repo.forks_count ?? 0,
+    repo.open_issues_count ?? 0,
+    repo.updated_at,
+    repo.html_url,
+  ]);
+
+  return [header, ...rows]
+    .map((row) => row.map((cell) => escapeCsvCell(cell)).join(","))
+    .join("\n");
+};
+
 const calculateScore = (profile, repos) => {
   if (!profile || !repos) return 0;
 
@@ -166,6 +197,10 @@ export default function App() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showExploreMenu, setShowExploreMenu] = useState(false);
   const [languageData, setLanguageData] = useState([]);
+  const [repoSearchQuery, setRepoSearchQuery] = useState("");
+  const [selectedLanguage, setSelectedLanguage] = useState("all");
+  const [repoSortBy, setRepoSortBy] = useState("stars_desc");
+  const [includeForkRepos, setIncludeForkRepos] = useState(true);
   const [suggestions, setSuggestions] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const profileMenuRef = useRef(null);
@@ -262,6 +297,10 @@ export default function App() {
     localStorage.removeItem("history");
     setHistory([]);
     setLanguageData([]);
+    setRepoSearchQuery("");
+    setSelectedLanguage("all");
+    setRepoSortBy("stars_desc");
+    setIncludeForkRepos(true);
   };
 
   const fetchSuggestions = async (value) => {
@@ -340,6 +379,10 @@ export default function App() {
       const repoList = repoRes.data || [];
       setRepos(repoList);
       setLanguageData(await collectLanguageData(repoList));
+      setRepoSearchQuery("");
+      setSelectedLanguage("all");
+      setRepoSortBy("stars_desc");
+      setIncludeForkRepos(true);
 
       setHistory((prevHistory) => {
         const updated = [normalizedUser, ...prevHistory.filter((item) => item !== normalizedUser)].slice(0, 6);
@@ -361,10 +404,51 @@ export default function App() {
   const score = calculateScore(profile, repos);
   const level = getLevel(score);
   const scoreTone = getScoreTone(score);
-  const topRepos = useMemo(
-    () => [...repos].sort((a, b) => b.stargazers_count - a.stargazers_count).slice(0, 5),
+  const availableLanguages = useMemo(
+    () =>
+      Array.from(new Set(repos.map((repo) => repo.language).filter(Boolean))).sort((a, b) =>
+        a.localeCompare(b)
+      ),
     [repos]
   );
+  const filteredRepos = useMemo(() => {
+    const query = repoSearchQuery.trim().toLowerCase();
+
+    const filtered = repos.filter((repo) => {
+      if (!includeForkRepos && repo.fork) return false;
+      if (selectedLanguage !== "all" && (repo.language || "Unknown") !== selectedLanguage) {
+        return false;
+      }
+      if (!query) return true;
+
+      return (
+        repo.name.toLowerCase().includes(query) ||
+        (repo.description || "").toLowerCase().includes(query)
+      );
+    });
+
+    return [...filtered].sort((a, b) => {
+      if (repoSortBy === "stars_desc") return b.stargazers_count - a.stargazers_count;
+      if (repoSortBy === "updated_desc") return new Date(b.updated_at) - new Date(a.updated_at);
+      if (repoSortBy === "forks_desc") return b.forks_count - a.forks_count;
+      return a.name.localeCompare(b.name);
+    });
+  }, [repos, repoSearchQuery, selectedLanguage, repoSortBy, includeForkRepos]);
+  const topRepos = useMemo(
+    () => [...filteredRepos].slice(0, 5),
+    [filteredRepos]
+  );
+  const averageStars = useMemo(() => {
+    if (filteredRepos.length === 0) return 0;
+    return (
+      filteredRepos.reduce((acc, repo) => acc + (repo.stargazers_count || 0), 0) /
+      filteredRepos.length
+    );
+  }, [filteredRepos]);
+  const forkRatio = useMemo(() => {
+    if (filteredRepos.length === 0) return 0;
+    return (filteredRepos.filter((repo) => repo.fork).length / filteredRepos.length) * 100;
+  }, [filteredRepos]);
   const aiInsights = useMemo(() => buildAiInsights(profile, repos, score), [profile, repos, score]);
   const isResultView = Boolean(profile);
   const isHomeView = !isResultView && !showLoginPage && !showHistory;
@@ -386,6 +470,19 @@ export default function App() {
       subtitle: "Use your Google account securely",
     },
   ];
+
+  const handleExportReposCsv = () => {
+    if (filteredRepos.length === 0) return;
+
+    const csv = buildRepoCsv(filteredRepos);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${profile?.login || "github-profile"}-repos.csv`;
+    link.click();
+    window.URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="app-shell min-h-screen px-4 py-4 text-white md:px-6 md:py-5">
@@ -906,6 +1003,7 @@ export default function App() {
             <div className="stat-card stat-card--repos rounded-2xl border border-white/10 bg-[#0f172a]/60 p-6">
               <p className="text-sm text-slate-300">📦 Repositories</p>
               <h2 className="text-3xl">{repos.length}</h2>
+              <p className="mt-1 text-xs text-slate-400">{filteredRepos.length} in current view</p>
             </div>
 
             <div className="stat-card stat-card--followers rounded-2xl border border-white/10 bg-[#0f172a]/60 p-6">
@@ -918,6 +1016,67 @@ export default function App() {
               <h2 className="text-3xl">
                 {repos.reduce((a, r) => a + r.stargazers_count, 0)}
               </h2>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-[#0f172a]/80 p-4 md:p-5">
+            <div className="grid gap-3 lg:grid-cols-[1.4fr_1fr_1fr_auto]">
+              <input
+                value={repoSearchQuery}
+                onChange={(event) => setRepoSearchQuery(event.target.value)}
+                placeholder="Search repos by name or description"
+                className="h-11 rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-fuchsia-400/45"
+              />
+
+              <select
+                value={selectedLanguage}
+                onChange={(event) => setSelectedLanguage(event.target.value)}
+                className="h-11 rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-slate-100 outline-none focus:border-fuchsia-400/45"
+              >
+                <option value="all">All languages</option>
+                {availableLanguages.map((language) => (
+                  <option key={language} value={language}>
+                    {language}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={repoSortBy}
+                onChange={(event) => setRepoSortBy(event.target.value)}
+                className="h-11 rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-slate-100 outline-none focus:border-fuchsia-400/45"
+              >
+                <option value="stars_desc">Sort: Stars (high to low)</option>
+                <option value="updated_desc">Sort: Recently updated</option>
+                <option value="forks_desc">Sort: Forks (high to low)</option>
+                <option value="name_asc">Sort: Name (A-Z)</option>
+              </select>
+
+              <button
+                type="button"
+                onClick={handleExportReposCsv}
+                disabled={filteredRepos.length === 0}
+                className="h-11 rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-4 text-sm font-semibold text-cyan-200 transition hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Export CSV
+              </button>
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-300">
+              <label className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
+                <input
+                  type="checkbox"
+                  checked={includeForkRepos}
+                  onChange={(event) => setIncludeForkRepos(event.target.checked)}
+                />
+                Include forked repositories
+              </label>
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
+                Avg stars: {averageStars.toFixed(1)}
+              </span>
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
+                Fork ratio: {forkRatio.toFixed(1)}%
+              </span>
             </div>
           </div>
 
