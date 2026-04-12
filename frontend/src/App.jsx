@@ -230,13 +230,13 @@ const pricingPlans = [
   {
     id: "free",
     name: "Free",
-    price: "$0",
-    period: "/month",
+    monthlyPrice: "$0",
+    yearlyEquivalent: "$0",
     subtitle: "Great for solo developers exploring public profile analytics.",
     features: [
       "Profile score and repository insights",
-      "Recent search history",
       "Basic charts and language breakdown",
+      "Public repo trend snapshots",
     ],
     cta: "Start Free",
     tone: "base",
@@ -244,35 +244,43 @@ const pricingPlans = [
   {
     id: "pro",
     name: "Pro",
-    price: "$12",
-    period: "/month",
-    subtitle: "For power users who need deeper filtering and export workflows.",
+    monthlyPrice: "$12",
+    yearlyEquivalent: "$9",
+    subtitle: "For developers who want deeper insight, stronger visibility, and faster growth.",
     features: [
-      "Advanced filters and smart sorting",
-      "CSV export and richer analytics views",
+      "AI-powered developer insights",
+      "Resume export (PDF)",
+      "Advanced repo analytics",
+      "Recent search history",
       "Priority API performance",
     ],
-    cta: "Upgrade to Pro",
+    cta: "Get Started",
     tone: "highlight",
+    badge: "Most Popular",
   },
   {
     id: "team",
     name: "Team",
-    price: "$39",
-    period: "/month",
+    monthlyPrice: "$39",
+    yearlyEquivalent: "$29",
     subtitle: "For teams that collaborate on engineering intelligence dashboards.",
     features: [
-      "Shared dashboards and saved views",
+      "Team comparison views",
+      "Multi-user dashboards",
+      "Collaboration analytics",
       "Role-based access controls",
-      "Team activity summaries",
     ],
     cta: "Contact Sales",
     tone: "base",
   },
 ];
 
-const PricingPanel = ({ subscription, onSelectPlan, onCancelRenewal, onResumeRenewal, loading }) => (
-  <section className="hero-panel relative overflow-hidden rounded-4xl px-4 py-10 md:px-8 md:py-12">
+const PricingPanel = ({ subscription, authUser, onSelectPlan, onCancelRenewal, onResumeRenewal, loading }) => {
+  const [billingCycle, setBillingCycle] = useState("monthly");
+  const isYearly = billingCycle === "yearly";
+
+  return (
+    <section className="hero-panel relative overflow-hidden rounded-4xl px-4 py-10 md:px-8 md:py-12">
     <div className="hero-grid" aria-hidden="true" />
     <div className="hero-orb hero-orb--left" aria-hidden="true" />
     <div className="hero-orb hero-orb--right" aria-hidden="true" />
@@ -288,10 +296,37 @@ const PricingPanel = ({ subscription, onSelectPlan, onCancelRenewal, onResumeRen
         </p>
       </div>
 
+      <div className="pricing-cycle-toggle mt-6 flex items-center justify-center">
+        <div className="inline-flex rounded-full border border-white/10 bg-white/5 p-1">
+          <button
+            type="button"
+            onClick={() => setBillingCycle("monthly")}
+            className={`pricing-cycle-chip ${!isYearly ? "pricing-cycle-chip--active" : ""}`}
+          >
+            Monthly
+          </button>
+          <button
+            type="button"
+            onClick={() => setBillingCycle("yearly")}
+            className={`pricing-cycle-chip ${isYearly ? "pricing-cycle-chip--active" : ""}`}
+          >
+            Yearly
+          </button>
+        </div>
+      </div>
+
       <div className="pricing-status mt-6 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-200">
         <div>
-          Current plan: <span className="font-semibold uppercase">{subscription.plan || "free"}</span>
-          {subscription.status ? (
+          {authUser ? (
+            <>
+              Current Plan: <span className="font-semibold uppercase">{subscription.plan || "free"}</span>
+            </>
+          ) : (
+            <>
+              You are on <span className="font-semibold uppercase">Free Plan</span>
+            </>
+          )}
+          {authUser && subscription.status && subscription.status !== "inactive" ? (
             <span className="ml-2 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] uppercase tracking-[0.14em] text-slate-300">
               {subscription.status}
             </span>
@@ -334,10 +369,21 @@ const PricingPanel = ({ subscription, onSelectPlan, onCancelRenewal, onResumeRen
             key={plan.name}
             className={`pricing-card rounded-3xl border p-5 ${plan.tone === "highlight" ? "pricing-card--highlight" : "pricing-card--base"}`}
           >
-            <div className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-400">{plan.name}</div>
-            <div className="mt-3 flex items-end gap-1">
-              <span className="text-4xl font-extrabold text-white">{plan.price}</span>
-              <span className="pb-1 text-sm text-slate-400">{plan.period}</span>
+            <div className="pricing-card-head flex items-center justify-between gap-3">
+              <div className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-400">{plan.name}</div>
+              {plan.badge ? <div className="pricing-popular-badge">🔥 {plan.badge}</div> : null}
+            </div>
+            <div className="mt-3 space-y-1">
+              <div className={`pricing-price-line ${!isYearly ? "pricing-price-line--active" : ""}`}>
+                <span className="text-4xl font-extrabold text-white">{plan.monthlyPrice}</span>
+                <span className="pb-1 text-sm text-slate-400">/month</span>
+              </div>
+              {plan.id !== "free" && (
+                <div className={`pricing-price-line pricing-price-line--yearly ${isYearly ? "pricing-price-line--active" : ""}`}>
+                  <span className="text-2xl font-bold text-emerald-300">{plan.yearlyEquivalent}</span>
+                  <span className="text-xs text-emerald-200/90">/month (billed yearly)</span>
+                </div>
+              )}
             </div>
             <p className="mt-3 text-sm text-slate-300">{plan.subtitle}</p>
 
@@ -350,20 +396,33 @@ const PricingPanel = ({ subscription, onSelectPlan, onCancelRenewal, onResumeRen
               ))}
             </ul>
 
-            <button
-              type="button"
-              onClick={() => onSelectPlan(plan.id)}
-              disabled={loading || subscription.plan === plan.id}
-              className={`mt-6 w-full rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${plan.tone === "highlight" ? "pricing-btn--highlight" : "pricing-btn--base"}`}
-            >
-              {subscription.plan === plan.id ? "Current Plan" : plan.cta}
-            </button>
+            {!(plan.id === "free" && authUser && subscription.plan === "free") && (
+              <button
+                type="button"
+                onClick={() => onSelectPlan(plan.id)}
+                disabled={loading || subscription.plan === plan.id}
+                className={`mt-6 w-full rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${plan.tone === "highlight" ? "pricing-btn--highlight" : "pricing-btn--base"}`}
+              >
+                {subscription.plan === plan.id ? "Current Plan" : plan.cta}
+              </button>
+            )}
+
+            {plan.id === "free" && authUser && subscription.plan === "free" && (
+              <div className="mt-6 inline-flex items-center rounded-full border border-sky-400/20 bg-sky-500/10 px-3 py-1 text-xs font-semibold text-sky-200">
+                Your Plan
+              </div>
+            )}
           </article>
         ))}
       </div>
+
+      <div className="pricing-trust-line mt-6 text-center text-xs font-medium tracking-[0.08em] text-slate-300">
+        No credit card required. Cancel anytime.
+      </div>
     </div>
   </section>
-);
+  );
+};
 
 export default function App() {
   const location = useLocation();
@@ -770,6 +829,8 @@ export default function App() {
     ? `${authUser.provider.charAt(0).toUpperCase()}${authUser.provider.slice(1)} Profile`
     : "Account";
   const canExportCsv = authUser && ["pro", "team"].includes(subscription.plan);
+  const canUseProFeatures = authUser && ["pro", "team"].includes(subscription.plan);
+  const canUseTeamDashboards = authUser && subscription.plan === "team";
 
   const loginProviders = [
     {
@@ -795,6 +856,67 @@ export default function App() {
     link.download = `${profile?.login || "github-profile"}-repos.csv`;
     link.click();
     window.URL.revokeObjectURL(url);
+  };
+
+  const handleExportResumePdf = () => {
+    if (!profile || !canUseProFeatures) return;
+
+    const topSkills = (languageData.length > 0 ? languageData : [])
+      .slice(0, 6)
+      .map((item) => `${item.name} (${item.value})`)
+      .join(" • ");
+
+    const topProjects = topRepos
+      .slice(0, 4)
+      .map((repo) => `<li><strong>${repo.name}</strong> - ⭐ ${repo.stargazers_count} - ${repo.language || "Unknown"}</li>`)
+      .join("");
+
+    const summaryHtml = `
+      <html>
+        <head>
+          <title>${profile.login} Resume Export</title>
+          <style>
+            body { font-family: Arial, sans-serif; color: #111827; padding: 24px; line-height: 1.5; }
+            h1, h2 { margin-bottom: 8px; }
+            .muted { color: #475569; }
+            .card { border: 1px solid #cbd5e1; border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; }
+          </style>
+        </head>
+        <body>
+          <h1>${profile.name || profile.login}</h1>
+          <div class="muted">@${profile.login}</div>
+          <p>${profile.bio || "GitHub developer profile."}</p>
+
+          <div class="card">
+            <h2>Profile Summary</h2>
+            <p>Followers: ${profile.followers} | Public Repos: ${repos.length} | Total Stars: ${repos.reduce((a, r) => a + r.stargazers_count, 0)}</p>
+            <p>Developer Score: ${score} (${getLevel(score)})</p>
+          </div>
+
+          <div class="card">
+            <h2>Top Skills</h2>
+            <p>${topSkills || "No dominant language detected"}</p>
+          </div>
+
+          <div class="card">
+            <h2>Top Repositories</h2>
+            <ul>${topProjects || "<li>No repositories found</li>"}</ul>
+          </div>
+        </body>
+      </html>
+    `;
+
+    const printWindow = window.open("", "_blank", "width=900,height=700");
+    if (!printWindow) {
+      setLoginNotice({ type: "error", text: "Please allow popups to export resume as PDF." });
+      return;
+    }
+
+    printWindow.document.open();
+    printWindow.document.write(summaryHtml);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
   };
 
   return (
@@ -857,7 +979,7 @@ export default function App() {
 
                   <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
                     <div className="text-sm font-semibold text-white">Login + History</div>
-                    <div className="mt-1 text-xs text-slate-400">Sign in to unlock search history and profile menu actions.</div>
+                    <div className="mt-1 text-xs text-slate-400">Sign in to unlock search history and full analytics.</div>
                   </div>
                 </div>
               </div>
@@ -1017,6 +1139,7 @@ export default function App() {
             {location.pathname === "/pricing" && (
               <PricingPanel
                 subscription={subscription}
+                authUser={authUser}
                 onSelectPlan={handlePlanSelect}
                 onCancelRenewal={handleCancelRenewal}
                 onResumeRenewal={handleResumeRenewal}
@@ -1048,7 +1171,7 @@ export default function App() {
             <div className="relative z-10 mx-auto flex max-w-5xl flex-col items-center">
               <div className="hero-badge mb-8 inline-flex items-center gap-2 rounded-full border border-white/10 px-5 py-2 text-sm font-medium text-violet-200 shadow-lg shadow-violet-500/10">
                 <span className="text-lg text-violet-300">✦</span>
-                <span>Powered by Advanced AI Analytics</span>
+                <span>Built for developers who need signal, not noise</span>
                 <span className="text-lg text-violet-300">✦</span>
               </div>
 
@@ -1058,8 +1181,14 @@ export default function App() {
               </h1>
 
               <p className="mt-7 max-w-4xl text-base leading-8 text-slate-300 md:text-[1.3rem] md:leading-8">
-                Analyze profiles, repos, and developer momentum in seconds.
+                Analyze profiles, repos, and developer momentum in seconds, then turn insights into better career and team decisions.
               </p>
+
+              <div className="hero-trust-chips mt-5 flex flex-wrap items-center justify-center gap-2.5 text-xs text-slate-200 md:text-sm">
+                <span className="hero-trust-chip">No credit card required</span>
+                <span className="hero-trust-chip">Cancel anytime</span>
+                <span className="hero-trust-chip">Setup in under 60 seconds</span>
+              </div>
 
               <div className="hero-search-shell mt-9 w-full max-w-5xl rounded-[1.6rem] border border-fuchsia-500/30 bg-[#1a2337]/95 p-2.5 shadow-[0_0_28px_rgba(236,72,153,0.34)] md:p-3">
                 <div className="flex flex-col gap-2.5 md:flex-row md:items-stretch">
@@ -1096,7 +1225,13 @@ export default function App() {
                 </div>
 
                 <p className="mt-4 text-sm text-slate-400 md:text-[0.98rem]">
-                  Get detailed analytics, contribution graphs, and repository insights
+                  Get profile score, AI insights, and repo-level analytics in one clean workflow.
+                </p>
+
+                <p className="mt-2 text-xs text-slate-500 md:text-sm">
+                  {authUser
+                    ? "Tip: Try usernames like torvalds, gaearon, or vercel for instant demo-quality results."
+                    : "Sign in to unlock search history and full analytics."}
                 </p>
 
                 {loading && (
@@ -1140,14 +1275,6 @@ export default function App() {
                   </div>
                 )}
 
-                {!authUser && (
-                  <div className="mt-4">
-                    <div className="text-sm text-slate-400">
-                      Sign in first to search profiles and save search history.
-                    </div>
-                  </div>
-                )}
-
                 <div className="hero-meta-grid mt-5 grid gap-3 text-left md:grid-cols-2">
                   <div className="hero-meta-card">
                     <div className="hero-meta-card__eyebrow">Recent searches</div>
@@ -1161,7 +1288,12 @@ export default function App() {
                             onClick={() => analyzeProfile(item)}
                             className="hero-chip hero-chip--recent"
                           >
-                            {item}
+                            <img
+                              src={`https://github.com/${item}.png?size=40`}
+                              alt={`${item} avatar`}
+                              className="hero-chip__avatar"
+                            />
+                            <span>{item}</span>
                           </button>
                         ))
                       ) : (
@@ -1185,6 +1317,39 @@ export default function App() {
                         </button>
                       ))}
                     </div>
+                  </div>
+                </div>
+
+                <div className="landing-proof-grid mt-5 grid gap-3 text-left md:grid-cols-3">
+                  <div className="landing-proof-card">
+                    <div className="landing-proof-card__value"><span className="landing-proof-card__icon">⚡</span>100+</div>
+                    <div className="landing-proof-card__label">Public repos processed per profile</div>
+                  </div>
+                  <div className="landing-proof-card">
+                    <div className="landing-proof-card__value"><span className="landing-proof-card__icon">📊</span>3 clicks</div>
+                    <div className="landing-proof-card__label">From search to decision-ready insights</div>
+                  </div>
+                  <div className="landing-proof-card">
+                    <div className="landing-proof-card__value"><span className="landing-proof-card__icon">🤖</span>AI + Data</div>
+                    <div className="landing-proof-card__label">Balanced output for developers and hiring teams</div>
+                  </div>
+                </div>
+
+                <div className="landing-flow mt-7 w-full rounded-2xl border border-white/10 bg-white/5 p-4 text-left md:p-5">
+                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Why use this?</div>
+                  <div className="landing-flow-grid mt-3 grid gap-3 md:grid-cols-3">
+                    <article className="landing-flow-card" style={{ "--flow-delay": "0ms" }}>
+                      <h3 className="landing-flow-card__title">🚀 Get instant GitHub insights</h3>
+                      <p className="landing-flow-card__copy">Profile score, trends, and top repos in seconds.</p>
+                    </article>
+                    <article className="landing-flow-card" style={{ "--flow-delay": "120ms" }}>
+                      <h3 className="landing-flow-card__title">📊 Understand developer strengths</h3>
+                      <p className="landing-flow-card__copy">See what someone is best at without digging through everything.</p>
+                    </article>
+                    <article className="landing-flow-card" style={{ "--flow-delay": "240ms" }}>
+                      <h3 className="landing-flow-card__title">🧠 AI-powered recommendations</h3>
+                      <p className="landing-flow-card__copy">Actionable suggestions you can use right away.</p>
+                    </article>
                   </div>
                 </div>
               </div>
@@ -1411,7 +1576,7 @@ export default function App() {
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-[#0f172a]/80 p-4 md:p-5">
-            <div className="grid gap-3 lg:grid-cols-[1.4fr_1fr_1fr_auto]">
+            <div className="grid gap-3 lg:grid-cols-[1.3fr_1fr_1fr_auto_auto]">
               <input
                 value={repoSearchQuery}
                 onChange={(event) => setRepoSearchQuery(event.target.value)}
@@ -1451,6 +1616,15 @@ export default function App() {
               >
                 {canExportCsv ? "Export CSV" : "Pro/Team only"}
               </button>
+
+              <button
+                type="button"
+                onClick={handleExportResumePdf}
+                disabled={!canUseProFeatures || !profile}
+                className="h-11 rounded-xl border border-fuchsia-400/20 bg-fuchsia-500/10 px-4 text-sm font-semibold text-fuchsia-200 transition hover:bg-fuchsia-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {canUseProFeatures ? "Export Resume (PDF)" : "Pro/Team only"}
+              </button>
             </div>
 
             <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-300">
@@ -1474,13 +1648,27 @@ export default function App() {
           <div className="grid gap-6 lg:grid-cols-2">
             <div className="rounded-2xl border border-fuchsia-400/20 bg-[#10172a]/90 p-6">
               <h2 className="mb-4 text-lg font-semibold text-white">AI Insights</h2>
-              <div className="space-y-2">
-                {aiInsights.map((insight) => (
-                  <div key={insight} className="rounded-xl border border-white/8 bg-white/5 px-3 py-2 text-sm text-slate-200">
-                    {insight}
-                  </div>
-                ))}
-              </div>
+              {canUseProFeatures ? (
+                <div className="space-y-2">
+                  {aiInsights.map((insight) => (
+                    <div key={insight} className="rounded-xl border border-white/8 bg-white/5 px-3 py-2 text-sm text-slate-200">
+                      {insight}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-xl border border-dashed border-fuchsia-400/30 bg-fuchsia-500/10 px-4 py-4 text-sm text-fuchsia-100">
+                  <div className="font-semibold">Locked for Free Plan</div>
+                  <p className="mt-1 text-fuchsia-100/85">Upgrade to Pro to unlock AI-powered insights and resume export.</p>
+                  <button
+                    type="button"
+                    onClick={() => navigate("/pricing")}
+                    className="mt-3 rounded-lg border border-fuchsia-300/30 bg-fuchsia-500/20 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-fuchsia-500/30"
+                  >
+                    View Pro Plan
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="rounded-2xl border border-cyan-400/20 bg-[#0d1a2b]/90 p-6">
@@ -1503,6 +1691,41 @@ export default function App() {
                 ))}
               </div>
             </div>
+          </div>
+
+          <div className="rounded-2xl border border-emerald-400/20 bg-[#0d1f1a]/85 p-6">
+            <h2 className="mb-3 text-lg font-semibold text-white">Team Dashboards</h2>
+            {canUseTeamDashboards ? (
+              <div className="grid gap-3 md:grid-cols-3">
+                <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                  <div className="text-xs uppercase tracking-[0.12em] text-emerald-200">Comparison</div>
+                  <div className="mt-1 text-2xl font-bold text-white">{Math.max(1, Math.round(score / 20))}/5</div>
+                  <p className="mt-1 text-xs text-slate-300">Team percentile bucket</p>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                  <div className="text-xs uppercase tracking-[0.12em] text-emerald-200">Collaboration</div>
+                  <div className="mt-1 text-2xl font-bold text-white">{Math.max(1, Math.round((profile.followers || 0) / 25))}</div>
+                  <p className="mt-1 text-xs text-slate-300">Cross-profile interaction signal</p>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                  <div className="text-xs uppercase tracking-[0.12em] text-emerald-200">Activity Index</div>
+                  <div className="mt-1 text-2xl font-bold text-white">{Math.min(100, Math.round((100 - forkRatio) + averageStars))}</div>
+                  <p className="mt-1 text-xs text-slate-300">Shared dashboard momentum score</p>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed border-emerald-300/30 bg-emerald-500/10 p-4 text-sm text-emerald-100">
+                <div className="font-semibold">Team feature locked</div>
+                <p className="mt-1 text-emerald-100/85">Upgrade to Team for multi-user dashboards, collaboration analytics, and team comparisons.</p>
+                <button
+                  type="button"
+                  onClick={() => navigate("/pricing")}
+                  className="mt-3 rounded-lg border border-emerald-300/30 bg-emerald-500/20 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-500/30"
+                >
+                  View Team Plan
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="grid gap-6 md:grid-cols-2">
