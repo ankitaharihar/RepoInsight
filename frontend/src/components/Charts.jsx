@@ -17,7 +17,7 @@ import {
 const COLORS = ["#3b82f6", "#8b5cf6", "#ec4899", "#22c55e", "#f59e0b"];
 
 // 🔥 LANGUAGE CHART (Donut)
-export function LanguageChart({ languageData = [], repos = [] }) {
+export function LanguageChart({ languageData = [], repos = [], theme = "dark" }) {
   const fallbackMap = {};
 
   repos.forEach((repo) => {
@@ -32,6 +32,13 @@ export function LanguageChart({ languageData = [], repos = [] }) {
   }));
 
   const data = languageData.length > 0 ? languageData : fallbackData;
+  const isLight = theme === "light";
+  const tooltipStyle = {
+    backgroundColor: isLight ? "#ffffff" : "#0f172a",
+    border: isLight ? "1px solid rgba(148,163,184,0.36)" : "1px solid rgba(255,255,255,0.12)",
+    borderRadius: "12px",
+    color: isLight ? "#0f172a" : "#e2e8f0"
+  };
 
   return (
     <ResponsiveContainer width="100%" height={260}>
@@ -50,14 +57,9 @@ export function LanguageChart({ languageData = [], repos = [] }) {
         </Pie>
         <Tooltip
           formatter={(value, name) => [value, name]}
-          contentStyle={{
-            backgroundColor: "#0f172a",
-            border: "1px solid rgba(255,255,255,0.12)",
-            borderRadius: "12px",
-            color: "#e2e8f0"
-          }}
-          labelStyle={{ color: "#cbd5e1" }}
-          cursor={{ fill: "rgba(255,255,255,0.06)" }}
+          contentStyle={tooltipStyle}
+          labelStyle={{ color: isLight ? "#334155" : "#cbd5e1" }}
+          cursor={{ fill: isLight ? "rgba(15,23,42,0.05)" : "rgba(255,255,255,0.06)" }}
         />
       </PieChart>
     </ResponsiveContainer>
@@ -65,8 +67,9 @@ export function LanguageChart({ languageData = [], repos = [] }) {
 }
 
 // 🔥 RADAR CHART (Skills)
-export function RadarChartBox({ repos }) {
+export function RadarChartBox({ repos, theme = "dark" }) {
   const totalStars = repos.reduce((acc, r) => acc + r.stargazers_count, 0);
+  const isLight = theme === "light";
 
   const data = [
     { subject: "Code", A: Math.min(100, repos.length * 5) },
@@ -79,13 +82,13 @@ export function RadarChartBox({ repos }) {
   return (
     <ResponsiveContainer width="100%" height={260}>
       <RadarChart data={data}>
-        <PolarGrid stroke="#334155" />
-        <PolarAngleAxis dataKey="subject" stroke="#94a3b8" />
+        <PolarGrid stroke={isLight ? "#94a3b8" : "#334155"} />
+        <PolarAngleAxis dataKey="subject" stroke={isLight ? "#64748b" : "#94a3b8"} />
         <Radar
           dataKey="A"
           stroke="#6366f1"
           fill="#6366f1"
-          fillOpacity={0.5}
+          fillOpacity={isLight ? 0.42 : 0.5}
            style={{ filter: "drop-shadow(0 0 15px #6366f1)" }}
         />
       </RadarChart>
@@ -94,7 +97,8 @@ export function RadarChartBox({ repos }) {
 }
 
 // 🔥 ACTIVITY CHART (Glow)
-export function ActivityChart() {
+export function ActivityChart({ theme = "dark" }) {
+  const isLight = theme === "light";
   const data = [
     { name: "Apr", value: 40 },
     { name: "May", value: 70 },
@@ -120,8 +124,17 @@ export function ActivityChart() {
           </linearGradient>
         </defs>
 
-        <XAxis dataKey="name" stroke="#64748b" />
-        <Tooltip />
+        <XAxis dataKey="name" stroke={isLight ? "#64748b" : "#94a3b8"} />
+        <Tooltip
+          contentStyle={{
+            backgroundColor: isLight ? "#ffffff" : "#0f172a",
+            border: isLight ? "1px solid rgba(148,163,184,0.36)" : "1px solid rgba(255,255,255,0.12)",
+            borderRadius: "12px",
+            color: isLight ? "#0f172a" : "#e2e8f0"
+          }}
+          labelStyle={{ color: isLight ? "#334155" : "#cbd5e1" }}
+          cursor={{ stroke: isLight ? "rgba(15,23,42,0.16)" : "rgba(255,255,255,0.25)" }}
+        />
 
         <Area
           type="monotone"

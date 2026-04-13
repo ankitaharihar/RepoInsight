@@ -150,14 +150,62 @@ const getAuthUser = () => {
   if (!rawCookie) return null;
 
   try {
-    return JSON.parse(decodeURIComponent(rawCookie));
+    const parsed = JSON.parse(decodeURIComponent(rawCookie));
+    return {
+      ...parsed,
+      avatarUrl: parsed?.avatarUrl || parsed?.avatar_url || parsed?.picture || "",
+    };
   } catch {
     try {
-      return JSON.parse(rawCookie);
+      const parsed = JSON.parse(rawCookie);
+      return {
+        ...parsed,
+        avatarUrl: parsed?.avatarUrl || parsed?.avatar_url || parsed?.picture || "",
+      };
     } catch {
       return null;
     }
   }
+};
+
+const getInitials = (value) => {
+  const safeValue = (value || "User").trim();
+  const parts = safeValue.split(/\s+/).filter(Boolean);
+
+  if (parts.length === 0) return "U";
+
+  if (parts.length === 1) {
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+
+  return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+};
+
+const UserAvatar = ({ user, sizeClass, textSizeClass }) => {
+  const [hasError, setHasError] = useState(false);
+  const label = user?.name || user?.login || "User";
+  const showImage = Boolean(user?.avatarUrl) && !hasError;
+
+  return (
+    <span
+      className={`${sizeClass} inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-slate-700`}
+      aria-hidden="true"
+    >
+      {showImage ? (
+        <img
+          src={user.avatarUrl}
+          alt=""
+          className="h-full w-full object-cover"
+          referrerPolicy="no-referrer"
+          onError={() => setHasError(true)}
+        />
+      ) : (
+        <span className={`${textSizeClass} font-semibold uppercase text-slate-200`}>
+          {getInitials(label)}
+        </span>
+      )}
+    </span>
+  );
 };
 
 const clearCookie = (name) => {
@@ -1051,11 +1099,7 @@ export default function App() {
                       onClick={() => setShowProfileMenu((value) => !value)}
                       className="nav-profile-btn profile-pill flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-left text-sm font-semibold text-white hover:bg-white/10"
                     >
-                      <img
-                        src={authUser.avatarUrl}
-                        alt={authUser.name || authUser.login}
-                        className="h-8 w-8 rounded-full border border-white/10 object-cover"
-                      />
+                      <UserAvatar user={authUser} sizeClass="h-8 w-8" textSizeClass="text-[0.62rem]" />
                       <div className="min-w-0">
                         <div className="truncate text-sm leading-tight text-white">
                           {authUser.name || authUser.login}
@@ -1073,11 +1117,7 @@ export default function App() {
                           {authProviderLabel}
                         </div>
                         <div className="flex items-center gap-3 rounded-xl px-3 py-2">
-                          <img
-                            src={authUser.avatarUrl}
-                            alt={authUser.name || authUser.login}
-                            className="h-10 w-10 rounded-full border border-white/10 object-cover"
-                          />
+                          <UserAvatar user={authUser} sizeClass="h-10 w-10" textSizeClass="text-xs" />
                           <div className="min-w-0">
                             <div className="truncate text-sm font-semibold text-white">
                               {authUser.name || authUser.login}
@@ -1741,7 +1781,7 @@ export default function App() {
           <div className="grid gap-6 md:grid-cols-2">
             <div className="rounded-2xl border border-white/10 bg-[#0f172a]/80 p-6">
               <h2 className="mb-4">Languages</h2>
-              <LanguageChart repos={repos} languageData={languageData} />
+              <LanguageChart repos={repos} languageData={languageData} theme={theme} />
               <div className="mt-4 flex flex-wrap gap-2">
                 {(languageData.length > 0
                   ? languageData
@@ -1762,12 +1802,12 @@ export default function App() {
 
             <div className="rounded-2xl border border-white/10 bg-[#0f172a]/80 p-6">
               <h2 className="mb-4">Skills</h2>
-              <RadarChartBox repos={repos} />
+              <RadarChartBox repos={repos} theme={theme} />
             </div>
 
             <div className="col-span-2 rounded-2xl border border-white/10 bg-[#0f172a]/80 p-6">
               <h2 className="mb-4">Activity</h2>
-              <ActivityChart repos={repos} />
+              <ActivityChart theme={theme} />
             </div>
           </div>
         </div>
