@@ -181,6 +181,62 @@ const getInitials = (value) => {
   return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
 };
 
+const normalizeHistoryItem = (item) => {
+  if (typeof item === "string") {
+    const query = item.trim();
+    return query ? { query, searchedAt: new Date().toISOString() } : null;
+  }
+
+  if (!item || typeof item !== "object") return null;
+
+  const query = String(item.query || item.username || item.user || "").trim();
+  if (!query) return null;
+
+  return {
+    query,
+    searchedAt: item.searchedAt || item.updatedAt || item.at || new Date().toISOString(),
+  };
+};
+
+const normalizeHistoryList = (items = []) =>
+  items.map(normalizeHistoryItem).filter(Boolean).slice(0, 6);
+
+const getHistoryStorageKey = (user) => {
+  const keyPart = user?.id || user?.login || user?.provider || "guest";
+  return `history:${keyPart}`;
+};
+
+const readHistoryForUser = (user) => {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const parsed = JSON.parse(localStorage.getItem(getHistoryStorageKey(user))) || [];
+    return normalizeHistoryList(parsed);
+  } catch {
+    return [];
+  }
+};
+
+const writeHistoryForUser = (user, items) => {
+  if (typeof window === "undefined") return;
+
+  localStorage.setItem(getHistoryStorageKey(user), JSON.stringify(normalizeHistoryList(items)));
+};
+
+const formatHistoryDate = (value) => {
+  if (!value) return "Recently searched";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Recently searched";
+
+  return date.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+};
+
 const UserAvatar = ({ user, sizeClass, textSizeClass }) => {
   const [hasError, setHasError] = useState(false);
   const label = user?.name || user?.login || "User";
@@ -514,13 +570,7 @@ export default function App() {
   const searchPanelRef = useRef(null);
   const resultSectionRef = useRef(null);
   const suggestTimerRef = useRef(null);
-  const [history, setHistory] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem("history")) || [];
-    } catch {
-      return [];
-    }
-  });
+  const [history, setHistory] = useState(() => readHistoryForUser(getAuthUser()));
 
   useEffect(() => {
     const loadSubscription = async () => {
@@ -605,6 +655,15 @@ export default function App() {
   }, [loginNotice]);
 
   useEffect(() => {
+    if (!authUser) {
+      setHistory([]);
+      return;
+    }
+
+    setHistory(readHistoryForUser(authUser));
+  }, [authUser]);
+
+  useEffect(() => {
     const handleClickOutside = (event) => {
       if (profileMenuRef.current && !profileMenuRef.current.contains(event.target)) {
         setShowProfileMenu(false);
@@ -646,6 +705,46 @@ export default function App() {
     window.location.href = `${API_BASE_URL}/auth/${provider}`;
   };
 
+  const scrollToSection = (sectionId) => {
+    window.requestAnimationFrame(() => {
+      document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
+
+  const handleExploreRedirect = (target) => {
+    setShowExploreMenu(false);
+
+    if (target === "profile-search") {
+      navigate("/");
+      setShowLoginPage(false);
+      setShowHistory(false);
+      scrollToSection("search-panel");
+      return;
+    }
+
+    if (target === "analytics") {
+      navigate("/");
+      setShowLoginPage(false);
+      setShowHistory(false);
+      scrollToSection("dashboard-section");
+      return;
+    }
+
+    if (target === "login-history") {
+      navigate("/");
+      if (authUser) {
+        setShowLoginPage(false);
+        setShowHistory(true);
+        scrollToSection("history-section");
+        return;
+      }
+
+      setShowHistory(false);
+      setShowLoginPage(true);
+      scrollToSection("login-section");
+    }
+  };
+
   const handleSignOut = () => {
     clearCookie("oauth_user");
     setAuthUser(null);
@@ -659,7 +758,6 @@ export default function App() {
     setSuggestions([]);
     setShowDropdown(false);
     localStorage.removeItem("lastUsername");
-    localStorage.removeItem("history");
     setHistory([]);
     setLanguageData([]);
     setRepoSearchQuery("");
@@ -798,8 +896,11 @@ export default function App() {
       setIncludeForkRepos(true);
 
       setHistory((prevHistory) => {
-        const updated = [normalizedUser, ...prevHistory.filter((item) => item !== normalizedUser)].slice(0, 6);
-        localStorage.setItem("history", JSON.stringify(updated));
+        const updated = normalizeHistoryList([
+          { query: normalizedUser, searchedAt: new Date().toISOString() },
+          ...prevHistory.filter((item) => item.query !== normalizedUser),
+        ]);
+        writeHistoryForUser(authUser, updated);
         return updated;
       });
 
@@ -993,7 +1094,7 @@ export default function App() {
             </div>
           </div>
 
-          <nav className="hidden items-center gap-8 text-sm font-semibold text-slate-400 lg:flex">
+          <nav className="hidden items-center gap-8 text-sm font-semibold text-slate-400 lg:ml-8 lg:flex">
             <NavLink to="/features" className={({ isActive }) => `nav-link ${isActive ? "nav-link--active" : ""}`}>
               Features
             </NavLink>
@@ -1021,20 +1122,32 @@ export default function App() {
                 </div>
 
                 <div className="mt-3 grid gap-2">
-                  <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                  <button
+                    type="button"
+                    onClick={() => handleExploreRedirect("profile-search")}
+                    className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left transition hover:border-fuchsia-400/30 hover:bg-white/10"
+                  >
                     <div className="text-sm font-semibold text-white">Profile Search</div>
                     <div className="mt-1 text-xs text-slate-400">Search any public GitHub username and load profile data instantly.</div>
-                  </div>
+                  </button>
 
-                  <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                  <button
+                    type="button"
+                    onClick={() => handleExploreRedirect("analytics")}
+                    className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left transition hover:border-fuchsia-400/30 hover:bg-white/10"
+                  >
                     <div className="text-sm font-semibold text-white">Analytics Dashboard</div>
                     <div className="mt-1 text-xs text-slate-400">View score, followers, stars, language breakdown, and activity graphs.</div>
-                  </div>
+                  </button>
 
-                  <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                  <button
+                    type="button"
+                    onClick={() => handleExploreRedirect("login-history")}
+                    className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left transition hover:border-fuchsia-400/30 hover:bg-white/10"
+                  >
                     <div className="text-sm font-semibold text-white">Login + History</div>
                     <div className="mt-1 text-xs text-slate-400">Sign in to unlock search history and full analytics.</div>
-                  </div>
+                  </button>
                 </div>
               </div>
             )}
@@ -1236,7 +1349,7 @@ export default function App() {
                 <span className="hero-trust-chip">Setup in under 60 seconds</span>
               </div>
 
-              <div ref={searchPanelRef} className="hero-search-shell mt-9 w-full max-w-5xl rounded-[1.6rem] border border-fuchsia-500/30 bg-[#1a2337]/95 p-2.5 shadow-[0_0_28px_rgba(236,72,153,0.34)] md:p-3">
+              <div id="search-panel" ref={searchPanelRef} className="hero-search-shell mt-9 w-full max-w-5xl rounded-[1.6rem] border border-fuchsia-500/30 bg-[#1a2337]/95 p-2.5 shadow-[0_0_28px_rgba(236,72,153,0.34)] md:p-3">
                 <div className="flex flex-col gap-2.5 md:flex-row md:items-stretch">
                   <div className="relative flex-1">
                     <div className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-slate-500">
@@ -1333,17 +1446,21 @@ export default function App() {
                       {history.length > 0 ? (
                         history.slice(0, 5).map((item) => (
                           <button
-                            key={`recent-${item}`}
+                            key={`recent-${item.query}`}
                             type="button"
-                            onClick={() => analyzeProfile(item)}
+                            onClick={() => analyzeProfile(item.query)}
                             className="hero-chip hero-chip--recent"
                           >
-                            <img
-                              src={`https://github.com/${item}.png?size=40`}
-                              alt={`${item} avatar`}
-                              className="hero-chip__avatar"
+                            <UserAvatar
+                              user={{
+                                login: item.query,
+                                name: item.query,
+                                avatarUrl: `https://github.com/${item.query}.png?size=40`,
+                              }}
+                              sizeClass="hero-chip__avatar"
+                              textSizeClass="text-[0.55rem]"
                             />
-                            <span>{item}</span>
+                            <span>{item.query}</span>
                           </button>
                         ))
                       ) : (
@@ -1409,7 +1526,7 @@ export default function App() {
         )}
 
         {!isResultView && showLoginPage && (
-          <section className="hero-panel relative overflow-hidden rounded-4xl px-4 py-8 md:px-8 md:py-10">
+          <section id="login-section" className="hero-panel relative overflow-hidden rounded-4xl px-4 py-8 md:px-8 md:py-10">
             <div className="hero-grid" aria-hidden="true" />
             <div className="hero-orb hero-orb--left" aria-hidden="true" />
             <div className="hero-orb hero-orb--right" aria-hidden="true" />
@@ -1484,34 +1601,60 @@ export default function App() {
         )}
 
         {isHistoryView && history.length > 0 && (
-          <div className="mx-auto w-full max-w-5xl rounded-2xl border border-white/10 bg-white/5 p-4">
-            <div className="mb-3 flex items-center justify-between gap-3">
+          <div id="history-section" className="history-panel mx-auto w-full max-w-5xl rounded-2xl border border-white/10 bg-white/5 p-4 md:p-5">
+            <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
               <div>
                 <h3 className="text-sm font-semibold tracking-wide text-gray-200">
                   Recent searches
                 </h3>
-                <span className="text-xs text-gray-500">Stored locally in your browser</span>
+                <span className="text-xs text-gray-500">Only your account searches are shown here</span>
               </div>
 
               <button
                 onClick={() => setShowHistory(false)}
-                className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-white/10"
+                className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-white/10 md:self-start"
               >
                 Back to Home
               </button>
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="history-grid grid gap-3 md:grid-cols-2">
               {history.map((item) => (
                 <button
-                  key={item}
+                  key={item.query}
+                  type="button"
                   onClick={() => {
-                    setUsername(item);
-                    analyzeProfile(item);
+                    setUsername(item.query);
+                    analyzeProfile(item.query);
                   }}
-                  className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm hover:bg-indigo-500/20"
+                  className="history-card group flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 p-3 text-left transition hover:border-fuchsia-400/30 hover:bg-white/10"
                 >
-                  {item}
+                  <div className="flex min-w-0 items-center gap-3">
+                    <UserAvatar
+                      user={{
+                        login: item.query,
+                        name: item.query,
+                        avatarUrl: `https://github.com/${item.query}.png?size=48`,
+                      }}
+                      sizeClass="history-card__avatar h-11 w-11"
+                      textSizeClass="text-[0.65rem]"
+                    />
+                    <div className="min-w-0">
+                        <div className="truncate text-base font-bold tracking-tight text-slate-900">
+                        {item.query}
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        Searched {formatHistoryDate(item.searchedAt)}
+                      </div>
+                      <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400">
+                        From your account history
+                      </div>
+                    </div>
+                  </div>
+
+                  <span className="history-card__action rounded-full border border-white/10 bg-white/70 px-3 py-1 text-xs font-semibold text-slate-700 transition group-hover:bg-white group-hover:text-slate-900">
+                    Search again
+                  </span>
                 </button>
               ))}
             </div>
@@ -1519,9 +1662,12 @@ export default function App() {
         )}
 
         {isHistoryView && history.length === 0 && (
-          <div className="mx-auto w-full max-w-5xl rounded-2xl border border-dashed border-white/10 bg-white/5 p-4 text-sm text-gray-400">
-            <div className="flex items-center justify-between gap-3">
-              <span>No search history yet.</span>
+          <div id="history-section" className="history-panel mx-auto w-full max-w-5xl rounded-2xl border border-dashed border-white/10 bg-white/5 p-4 text-sm text-gray-400">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <div className="text-sm font-semibold text-slate-200">No searches saved yet</div>
+                <div className="text-xs text-slate-500">Search a profile while signed in and it will appear here.</div>
+              </div>
               <button
                 onClick={() => setShowHistory(false)}
                 className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-white/10"
@@ -1535,7 +1681,7 @@ export default function App() {
       </div>
 
       {isHomeRoute && profile && (
-        <div ref={resultSectionRef} className="mt-8 space-y-6">
+        <div id="dashboard-section" ref={resultSectionRef} className="mt-8 space-y-6">
           <div className="rounded-2xl border border-white/10 bg-[#0f172a]/80 p-6">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-4">
