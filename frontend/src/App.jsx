@@ -12,6 +12,20 @@ import {
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 const TRENDING_USERS = ["torvalds", "gaearon", "sindresorhus", "yyx990803", "vercel"];
 
+const buildLocalSuggestions = (query) => {
+  const normalized = String(query || "").trim().toLowerCase();
+  if (!normalized) return [];
+
+  return TRENDING_USERS
+    .filter((item) => item.toLowerCase().includes(normalized))
+    .slice(0, 5)
+    .map((login, index) => ({
+      id: `local-${login}-${index}`,
+      login,
+      avatar_url: `https://github.com/${login}.png?size=40`,
+    }));
+};
+
 const escapeCsvCell = (value) => {
   const raw = value == null ? "" : String(value);
   return `"${raw.replace(/"/g, '""')}"`;
@@ -1042,17 +1056,44 @@ export default function App() {
   };
 
   const fetchSuggestions = async (value) => {
-    if (!value) {
+    const normalizedValue = String(value || "").trim();
+
+    if (!normalizedValue) {
       setSuggestions([]);
       return;
     }
 
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/github/search/users?q=${encodeURIComponent(value)}&per_page=8`);
-      setSuggestions(res.data.items.slice(0, 5));
+      const res = await axios.get(`${API_BASE_URL}/api/github/search/users?q=${encodeURIComponent(normalizedValue)}&per_page=8`, {
+        timeout: 5000,
+      });
+      const items = Array.isArray(res.data?.items) ? res.data.items.slice(0, 5) : [];
+      setSuggestions(items);
       setShowDropdown(true);
-    } catch (err) {
-      console.log(err);
+    } catch {
+      try {
+        // Fallback for deployed frontend when backend URL/env is not reachable.
+        const fallbackRes = await axios.get("https://api.github.com/search/users", {
+          params: {
+            q: normalizedValue,
+            per_page: 8,
+          },
+          timeout: 5000,
+          headers: {
+            Accept: "application/vnd.github+json",
+          },
+        });
+
+        const fallbackItems = Array.isArray(fallbackRes.data?.items)
+          ? fallbackRes.data.items.slice(0, 5)
+          : [];
+        setSuggestions(fallbackItems);
+        setShowDropdown(true);
+      } catch {
+        const localItems = buildLocalSuggestions(normalizedValue);
+        setSuggestions(localItems);
+        setShowDropdown(true);
+      }
     }
   };
 
