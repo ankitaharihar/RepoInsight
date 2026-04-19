@@ -374,6 +374,10 @@ app.get("/auth/config", (req, res) => {
   res.json(getOAuthConfigStatus());
 });
 
+app.get("/api", (req, res) => {
+  return res.json({ ok: true, message: "API running" });
+});
+
 app.get("/auth/github/callback", async (req, res) => {
   try {
     const { code, state, error } = req.query;
@@ -548,6 +552,101 @@ app.get("/api/github/search/users", async (req, res) => {
     return res.json(response.data);
   } catch (error) {
     return forwardGitHubError(res, error, "Failed to search users");
+  }
+});
+
+app.get("/api/user", async (req, res) => {
+  try {
+    const { q, per_page = 8 } = req.query;
+    const normalizedQuery = String(q || "").trim();
+    const cacheKey = `search:${normalizedQuery}:${per_page}`;
+
+    const cached = getCachedValue(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
+    if (!normalizedQuery) {
+      return res.status(400).json({ message: "Query required", items: [] });
+    }
+
+    const response = await githubClient.get("/search/users", {
+      params: {
+        q: normalizedQuery,
+        per_page,
+      },
+    });
+
+    setCachedValue(cacheKey, response.data, 2 * 60 * 1000);
+
+    return res.json(response.data);
+  } catch (error) {
+    return forwardGitHubError(res, error, "Failed to search users");
+  }
+});
+
+app.get("/api/github", async (req, res) => {
+  try {
+    const username = String(req.query.username || "").trim();
+    const cacheKey = `profile:${username}`;
+
+    if (!username) {
+      return res.status(400).json({ message: "Username required" });
+    }
+
+    const cached = getCachedValue(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
+    const response = await githubClient.get(`/users/${username}`);
+
+    setCachedValue(cacheKey, response.data, 5 * 60 * 1000);
+
+    return res.json(response.data);
+  } catch (error) {
+    return forwardGitHubError(res, error, "User not found");
+  }
+});
+
+app.get("/api/repos", async (req, res) => {
+  try {
+    const username = String(req.query.username || "").trim();
+    const page = Number(req.query.page || 1);
+    const per_page = Number(req.query.per_page || 10);
+    const cacheKey = `repos:${username}:${page}:${per_page}`;
+
+    if (!username) {
+      return res.status(400).json({ message: "Username required" });
+    }
+
+    const cached = getCachedValue(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
+    const response = await githubClient.get(`/users/${username}/repos`, {
+      params: {
+        page,
+        per_page,
+        sort: "updated",
+      },
+    });
+
+    const payload = {
+      data: response.data,
+      pagination: {
+        has_prev: page > 1,
+        has_next: response.data.length === Number(per_page),
+        total_pages: page + 1,
+      },
+    };
+
+    setCachedValue(cacheKey, payload, 5 * 60 * 1000);
+
+    return res.json(payload);
+  } catch (error) {
+    return forwardGitHubError(res, error, "Failed to fetch repos");
   }
 });
 
@@ -895,7 +994,7 @@ app.post("/api/billing/stripe/webhook", express.raw({ type: "application/json" }
   }
 });
 
-if (require.main === module) {
+if (require.main === module && process.env.NODE_ENV !== "production") {
   app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
