@@ -8,6 +8,7 @@
     "cors": "^2.8.6",
     "dotenv": "^16.6.1",
     "express": "^5.2.1",
+    "mongoose": "^9.4.1",
     "nodemailer": "^7.0.10",
     "repoinsight": "file:..",
     "stripe": "^18.2.1"

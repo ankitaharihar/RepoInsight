@@ -4,6 +4,7 @@ require("dotenv").config({ path: path.join(__dirname, ".env") });
 
 const crypto = require("crypto");
 const express = require("express");
+const mongoose = require("mongoose");
 const axios = require("axios");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
@@ -12,6 +13,16 @@ const Stripe = require("stripe");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+if (process.env.MONGO_URI) {
+  mongoose
+    .connect(process.env.MONGO_URI)
+    .then(() => console.log("MongoDB Connected"))
+    .catch((err) => console.error("Mongo Error:", err));
+} else {
+  console.warn("MONGO_URI not set. Skipping MongoDB connection.");
+}
+
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 const BACKEND_URL = process.env.BACKEND_URL || `http://localhost:${PORT}`;
 const BASE_URL = "https://api.github.com";

@@ -9,11 +9,8 @@ import {
   ActivityChart
 } from "./components/Charts";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (
-  typeof window !== "undefined" && window.location.hostname === "localhost"
-    ? "http://localhost:5000"
-    : ""
-);
+const API_BASE_URL = String(import.meta.env.VITE_API_BASE_URL || "").trim();
+const apiUrl = (path) => `${API_BASE_URL}${path}`;
 const TRENDING_USERS = ["torvalds", "gaearon", "sindresorhus", "yyx990803", "vercel"];
 
 const isLocalApiInProduction =
@@ -343,9 +340,18 @@ const fetchGitHubProfileBundle = async (username) => {
   const normalizedUser = username.trim();
 
   const [profileRes, repoRes, activityRes] = await Promise.all([
-    axios.get(`${API_BASE_URL}/api/github/${normalizedUser}`),
-    axios.get(`${API_BASE_URL}/api/github/${normalizedUser}/repos?per_page=100`),
-    axios.get(`${API_BASE_URL}/api/github/${normalizedUser}/activity?days=30`).catch(() => ({ data: { events: [], series: [] } })),
+    axios.get(apiUrl("/api/github"), {
+      params: { username: normalizedUser },
+    }),
+    axios.get(apiUrl("/api/repos"), {
+      params: { username: normalizedUser, per_page: 100 },
+    }),
+    axios.get(`https://api.github.com/users/${encodeURIComponent(normalizedUser)}/events/public`, {
+      params: { per_page: 100 },
+      headers: {
+        Accept: "application/vnd.github+json",
+      },
+    }).catch(() => ({ data: [] })),
   ]);
 
   const repoPayload = repoRes.data;
@@ -355,11 +361,13 @@ const fetchGitHubProfileBundle = async (username) => {
       ? repoPayload.data
       : [];
 
+  const activityEvents = Array.isArray(activityRes.data) ? activityRes.data : [];
+
   return {
     profile: profileRes.data,
     repos,
-    activity: activityRes.data?.series || buildRecentActivitySeries(activityRes.data?.events || [], repos),
-    rawActivity: activityRes.data?.events || [],
+    activity: buildRecentActivitySeries(activityEvents, repos),
+    rawActivity: activityEvents,
   };
 };
 
@@ -815,8 +823,13 @@ export default function App() {
         return;
       }
 
+      if (!hasConfiguredApiBase) {
+        setSubscription({ plan: "free", status: "inactive", currentPeriodEnd: null, cancelAtPeriodEnd: false });
+        return;
+      }
+
       try {
-        const response = await axios.get(`${API_BASE_URL}/api/billing/subscription`, {
+        const response = await axios.get(apiUrl("/api/billing/subscription"), {
           withCredentials: true,
         });
         setSubscription(response.data.subscription);
@@ -870,7 +883,7 @@ export default function App() {
       }
 
       try {
-        const response = await axios.get(`${API_BASE_URL}/auth/config`, {
+        const response = await axios.get(apiUrl("/auth/config"), {
           timeout: 5000
         });
         setOauthConfig(response.data);
@@ -879,7 +892,7 @@ export default function App() {
         // Retry once after delay
         const retryTimer = setTimeout(async () => {
           try {
-            const response = await axios.get(`${API_BASE_URL}/auth/config`, {
+            const response = await axios.get(apiUrl("/auth/config"), {
               timeout: 5000
             });
             setOauthConfig(response.data);
@@ -965,7 +978,7 @@ export default function App() {
       return;
     }
 
-    window.location.href = `${API_BASE_URL}/auth/${provider}`;
+    window.location.href = apiUrl(`/auth/${provider}`);
   };
 
   const scrollToSection = (sectionId) => {
@@ -1048,7 +1061,7 @@ export default function App() {
       setUpdatingPlan(true);
       if (planId === "free") {
         const response = await axios.post(
-          `${API_BASE_URL}/api/billing/subscription`,
+          apiUrl("/api/billing/subscription"),
           { plan: "free" },
           { withCredentials: true }
         );
@@ -1056,7 +1069,7 @@ export default function App() {
         setLoginNotice({ type: "success", text: "Switched to FREE plan." });
       } else {
         const response = await axios.post(
-          `${API_BASE_URL}/api/billing/checkout-session`,
+          apiUrl("/api/billing/checkout-session"),
           { plan: planId },
           { withCredentials: true }
         );
@@ -1079,7 +1092,7 @@ export default function App() {
   const handleCancelRenewal = async () => {
     try {
       setUpdatingPlan(true);
-      const response = await axios.post(`${API_BASE_URL}/api/billing/subscription/cancel`, {}, { withCredentials: true });
+      const response = await axios.post(apiUrl("/api/billing/subscription/cancel"), {}, { withCredentials: true });
       setSubscription(response.data.subscription);
       setLoginNotice({ type: "success", text: "Your subscription will cancel at period end." });
     } catch (error) {
@@ -1093,7 +1106,7 @@ export default function App() {
   const handleResumeRenewal = async () => {
     try {
       setUpdatingPlan(true);
-      const response = await axios.post(`${API_BASE_URL}/api/billing/subscription/resume`, {}, { withCredentials: true });
+      const response = await axios.post(apiUrl("/api/billing/subscription/resume"), {}, { withCredentials: true });
       setSubscription(response.data.subscription);
       setLoginNotice({ type: "success", text: "Subscription renewal resumed." });
     } catch (error) {
@@ -1122,20 +1135,15 @@ export default function App() {
     setSuggestions(baseSuggestions);
     setShowDropdown(true);
 
-    const hasCustomBackend =
-      Boolean(String(API_BASE_URL || "").trim()) && !isLocalApiInProduction;
-
     try {
       const requestList = [];
 
-      if (hasCustomBackend) {
-        requestList.push(
-          axios.get(`${API_BASE_URL}/api/github/search/users`, {
-            params: { q: normalizedValue, per_page: 8 },
-            timeout: 5000,
-          })
-        );
-      }
+      requestList.push(
+        axios.get(apiUrl("/api/user"), {
+          params: { q: normalizedValue, per_page: 8 },
+          timeout: 5000,
+        })
+      );
 
       // Netlify serverless fallback for deployed frontend-only environments.
       requestList.push(
