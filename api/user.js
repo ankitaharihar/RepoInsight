@@ -1,4 +1,4 @@
-export default async function handler(req, res) {
+async function handler(req, res) {
   const { q, per_page = 8 } = req.query || {};
   const query = String(q || "").trim();
   const normalizedPerPage = Math.min(Math.max(Number(per_page) || 8, 1), 20);
@@ -39,3 +39,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ message: "Failed to search users", items: [] });
   }
 }
+
+module.exports = handler;

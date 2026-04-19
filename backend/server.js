@@ -15,10 +15,12 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 if (process.env.MONGO_URI) {
-  mongoose
-    .connect(process.env.MONGO_URI)
-    .then(() => console.log("MongoDB Connected"))
-    .catch((err) => console.error("Mongo Error:", err));
+  if (mongoose.connection.readyState === 0) {
+    mongoose
+      .connect(process.env.MONGO_URI)
+      .then(() => console.log("MongoDB Connected"))
+      .catch((err) => console.error("Mongo Error:", err));
+  }
 } else {
   console.warn("MONGO_URI not set. Skipping MongoDB connection.");
 }
@@ -893,6 +895,10 @@ app.post("/api/billing/stripe/webhook", express.raw({ type: "application/json" }
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;

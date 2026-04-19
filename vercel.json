@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "routes": [
+    {
+      "src": "/auth/(.*)",
+      "dest": "/api/index.js"
+    },
+    {
+      "src": "/api/billing/(.*)",
+      "dest": "/api/index.js"
+    },
+    {
+      "src": "/api/billing",
+      "dest": "/api/index.js"
+    }
+  ]
+}

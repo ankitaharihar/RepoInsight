@@ -1,4 +1,4 @@
-export default async function handler(req, res) {
+async function handler(req, res) {
   const { username, page = 1, per_page = 30 } = req.query || {};
   const normalizedUsername = String(username || "").trim();
   const normalizedPage = Math.max(Number(page) || 1, 1);
@@ -34,3 +34,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Failed to fetch repos" });
   }
 }
+
+module.exports = handler;

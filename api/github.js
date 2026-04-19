@@ -1,4 +1,4 @@
-export default async function handler(req, res) {
+async function handler(req, res) {
   const { username } = req.query || {};
   const normalizedUsername = String(username || "").trim();
 
@@ -31,3 +31,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Failed to fetch user" });
   }
 }
+
+module.exports = handler;
