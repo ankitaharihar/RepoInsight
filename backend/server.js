@@ -26,7 +26,6 @@ if (process.env.MONGO_URI) {
 }
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
-const BACKEND_URL = process.env.BACKEND_URL || `http://localhost:${PORT}`;
 const BASE_URL = "https://api.github.com";
 const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY)
@@ -307,6 +306,26 @@ const getOAuthConfigStatus = () => ({
   google: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
 });
 
+const normalizeBaseUrl = (value) => String(value || "").trim().replace(/\/+$/, "");
+
+const getBackendBaseUrl = (req) => {
+  const configuredBaseUrl = normalizeBaseUrl(process.env.BACKEND_URL);
+  if (configuredBaseUrl) return configuredBaseUrl;
+
+  const forwardedProtoHeader = req.headers["x-forwarded-proto"];
+  const proto =
+    typeof forwardedProtoHeader === "string"
+      ? forwardedProtoHeader.split(",")[0].trim()
+      : req.protocol || "http";
+  const host = req.get("x-forwarded-host") || req.get("host");
+
+  if (host) {
+    return `${proto}://${host}`;
+  }
+
+  return `http://localhost:${PORT}`;
+};
+
 const redirectToFrontend = (res, query = {}) => {
   const url = new URL(FRONTEND_URL);
   Object.entries(query).forEach(([key, value]) => {
@@ -333,7 +352,7 @@ app.get("/auth/github", (req, res) => {
     maxAge: 1000 * 60 * 10,
   });
 
-  const redirectUri = `${BACKEND_URL}/auth/github/callback`;
+  const redirectUri = `${getBackendBaseUrl(req)}/auth/github/callback`;
   const scope = encodeURIComponent("read:user user:email");
 
   const url =
@@ -355,7 +374,7 @@ app.get("/auth/google", (req, res) => {
     maxAge: 1000 * 60 * 10,
   });
 
-  const redirectUri = `${BACKEND_URL}/auth/google/callback`;
+  const redirectUri = `${getBackendBaseUrl(req)}/auth/google/callback`;
   const scope = encodeURIComponent("openid email profile");
 
   const url =
@@ -393,7 +412,7 @@ app.get("/auth/github/callback", async (req, res) => {
       return redirectToFrontend(res, { login_error: "github_state_mismatch" });
     }
 
-    const redirectUri = `${BACKEND_URL}/auth/github/callback`;
+    const redirectUri = `${getBackendBaseUrl(req)}/auth/github/callback`;
     const tokenResponse = await axios.post(
       "https://github.com/login/oauth/access_token",
       new URLSearchParams({
@@ -470,6 +489,7 @@ app.get("/auth/google/callback", async (req, res) => {
       return redirectToFrontend(res, { login_error: "google_state_mismatch" });
     }
 
+    const redirectUri = `${getBackendBaseUrl(req)}/auth/google/callback`;
     const tokenResponse = await axios.post(
       "https://oauth2.googleapis.com/token",
       new URLSearchParams({
@@ -477,7 +497,7 @@ app.get("/auth/google/callback", async (req, res) => {
         client_secret: process.env.GOOGLE_CLIENT_SECRET,
         code,
         grant_type: "authorization_code",
-        redirect_uri: `${BACKEND_URL}/auth/google/callback`,
+        redirect_uri: redirectUri,
       }).toString(),
       {
         headers: {
