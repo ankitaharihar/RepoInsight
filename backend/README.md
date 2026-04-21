@@ -121,6 +121,23 @@ Response shape:
 
 Returns a language frequency map built from the user's public repositories.
 
+### `GET /api/github/:username/insights`
+
+Returns an aggregated insight snapshot for a user based on their public repositories.
+
+Query params:
+
+- `window_days` optional, defaults to `30` (bounded to `7-365`)
+- `top` optional, defaults to `5` (bounded to `1-20`)
+
+Response shape:
+
+- `username`: requested GitHub username
+- `totals`: repository, stars, forks, watchers, and open issue counts
+- `recent`: repo activity counts inside the selected window
+- `languageBreakdown`: per-language repo and star totals
+- `topStarredRepos`: top repositories by stars
+
 ### `GET /api/github/search/users`
 
 Returns GitHub user search results for the supplied query string.

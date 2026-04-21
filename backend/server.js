@@ -201,6 +201,13 @@ const setCachedValue = (key, value, ttlMs) => {
   });
 };
 
+const parseBoundedNumber = (value, fallback, min, max) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+
+  return Math.min(Math.max(Math.floor(parsed), min), max);
+};
+
 const COOKIE_OPTIONS = {
   path: "/",
   sameSite: "lax",
@@ -810,6 +817,115 @@ app.get("/api/github/:username/languages", async (req, res) => {
     return res.json(langStats);
   } catch (error) {
     return forwardGitHubError(res, error, "Failed to fetch languages");
+  }
+});
+
+app.get("/api/github/:username/insights", async (req, res) => {
+  try {
+    const { username } = req.params;
+    const windowDays = parseBoundedNumber(req.query.window_days, 30, 7, 365);
+    const top = parseBoundedNumber(req.query.top, 5, 1, 20);
+    const cacheKey = `insights:${username}:${windowDays}:${top}`;
+    const cached = getCachedValue(cacheKey);
+
+    if (cached) {
+      return res.json(cached);
+    }
+
+    const response = await githubClient.get(`/users/${username}/repos`, {
+      params: {
+        per_page: 100,
+        sort: "updated",
+      },
+    });
+
+    const repos = Array.isArray(response.data) ? response.data : [];
+    const now = Date.now();
+    const windowStart = now - windowDays * 24 * 60 * 60 * 1000;
+
+    const totals = repos.reduce(
+      (acc, repo) => {
+        acc.stars += repo.stargazers_count || 0;
+        acc.forks += repo.forks_count || 0;
+        acc.watchers += repo.watchers_count || 0;
+        acc.openIssues += repo.open_issues_count || 0;
+        return acc;
+      },
+      {
+        repositories: repos.length,
+        stars: 0,
+        forks: 0,
+        watchers: 0,
+        openIssues: 0,
+      }
+    );
+
+    const recent = repos.reduce(
+      (acc, repo) => {
+        const pushedAt = repo.pushed_at ? new Date(repo.pushed_at).getTime() : 0;
+        const updatedAt = repo.updated_at ? new Date(repo.updated_at).getTime() : 0;
+
+        if (pushedAt >= windowStart) acc.pushedInWindow += 1;
+        if (updatedAt >= windowStart) acc.updatedInWindow += 1;
+
+        return acc;
+      },
+      {
+        windowDays,
+        pushedInWindow: 0,
+        updatedInWindow: 0,
+      }
+    );
+
+    const languageMap = repos.reduce((acc, repo) => {
+      if (!repo.language) return acc;
+
+      if (!acc[repo.language]) {
+        acc[repo.language] = {
+          repos: 0,
+          stars: 0,
+        };
+      }
+
+      acc[repo.language].repos += 1;
+      acc[repo.language].stars += repo.stargazers_count || 0;
+      return acc;
+    }, {});
+
+    const languageBreakdown = Object.entries(languageMap)
+      .map(([language, stats]) => ({
+        language,
+        repos: stats.repos,
+        stars: stats.stars,
+      }))
+      .sort((a, b) => (b.repos - a.repos) || (b.stars - a.stars));
+
+    const topStarredRepos = [...repos]
+      .sort((a, b) => (b.stargazers_count || 0) - (a.stargazers_count || 0))
+      .slice(0, top)
+      .map((repo) => ({
+        name: repo.name,
+        fullName: repo.full_name,
+        description: repo.description,
+        language: repo.language,
+        stars: repo.stargazers_count || 0,
+        forks: repo.forks_count || 0,
+        updatedAt: repo.updated_at,
+        url: repo.html_url,
+      }));
+
+    const payload = {
+      username,
+      totals,
+      recent,
+      languageBreakdown,
+      topStarredRepos,
+    };
+
+    setCachedValue(cacheKey, payload, 5 * 60 * 1000);
+    return res.json(payload);
+  } catch (error) {
+    return forwardGitHubError(res, error, "Failed to fetch user insights");
   }
 });
 
