@@ -41,6 +41,7 @@ Create a `.env` file in the backend folder with these values:
 - `BACKEND_URL` - backend URL, usually `http://localhost:5000`
 - `GITHUB_CLIENT_ID`
 - `GITHUB_CLIENT_SECRET`
+- `GITHUB_CALLBACK_URL` - exact GitHub OAuth callback URL, for example `https://yoursapi.railway.app/auth/github/callback`
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
 - `GITHUB_TOKEN` - optional, improves GitHub API rate limits for proxy requests
@@ -202,5 +203,6 @@ After deployment, your **frontend must know your backend URL**. In Netlify:
    - GitHub: `https://yoursapi.railway.app/auth/github/callback`
    - Google: `https://yoursapi.railway.app/auth/google/callback`
 3. Add the Client IDs and secrets to your backend environment variables
-4. Deploy both frontend and backend
-5. Test the login flow on the deployed site
+4. Set `GITHUB_CALLBACK_URL` to the exact callback URL registered in GitHub
+5. Deploy both frontend and backend
+6. Test the login flow on the deployed site

@@ -214,6 +214,16 @@ const COOKIE_OPTIONS = {
   secure: process.env.NODE_ENV === "production",
 };
 
+const getGitHubCallbackUrl = (req) => {
+  const configuredCallbackUrl = normalizeBaseUrl(process.env.GITHUB_CALLBACK_URL);
+
+  if (configuredCallbackUrl) {
+    return configuredCallbackUrl;
+  }
+
+  return `${getBackendBaseUrl(req)}/auth/github/callback`;
+};
+
 app.use(
   cors({
     origin: FRONTEND_URL,
@@ -359,7 +369,7 @@ app.get("/auth/github", (req, res) => {
     maxAge: 1000 * 60 * 10,
   });
 
-  const redirectUri = `${getBackendBaseUrl(req)}/auth/github/callback`;
+  const redirectUri = getGitHubCallbackUrl(req);
   const scope = encodeURIComponent("read:user user:email");
 
   const url =
@@ -419,7 +429,7 @@ app.get("/auth/github/callback", async (req, res) => {
       return redirectToFrontend(res, { login_error: "github_state_mismatch" });
     }
 
-    const redirectUri = `${getBackendBaseUrl(req)}/auth/github/callback`;
+    const redirectUri = getGitHubCallbackUrl(req);
     const tokenResponse = await axios.post(
       "https://github.com/login/oauth/access_token",
       new URLSearchParams({
