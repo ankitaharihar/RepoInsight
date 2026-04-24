@@ -39,6 +39,7 @@ Create a `.env` file in the backend folder with these values:
 
 - `FRONTEND_URL` - frontend URL, usually `http://localhost:5173`
 - `BACKEND_URL` - backend URL, usually `http://localhost:5000`
+- `MONGO_URI` - MongoDB connection string (recommended in production for persistent subscription data)
 - `GITHUB_CLIENT_ID`
 - `GITHUB_CLIENT_SECRET`
 - `GITHUB_CALLBACK_URL` - exact GitHub OAuth callback URL, for example `https://yoursapi.railway.app/auth/github/callback`
@@ -55,6 +56,8 @@ Create a `.env` file in the backend folder with these values:
 - `EMAIL_PASS`
 - `EMAIL_FROM` - optional sender name/address
 - `EMAIL_SECURE` - set to `true` for secure SMTP
+
+If `MONGO_URI` is not configured or MongoDB is unavailable, subscription state falls back to in-memory storage (ephemeral) and is not persisted across restarts.
 
 ## API Endpoints
 

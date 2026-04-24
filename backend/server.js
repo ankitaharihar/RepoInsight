@@ -1,5 +1,4 @@
 const path = require("path");
-const fs = require("fs/promises");
 require("dotenv").config({ path: path.join(__dirname, ".env") });
 
 const crypto = require("crypto");
@@ -47,7 +46,24 @@ const githubClient = axios.create({
 });
 
 const githubCache = new Map();
-const SUBSCRIPTIONS_FILE = path.join(__dirname, "data", "subscriptions.json");
+const inMemorySubscriptions = new Map();
+
+const subscriptionSchema = new mongoose.Schema(
+  {
+    userId: { type: String, required: true, unique: true, index: true },
+    plan: { type: String, default: "free" },
+    status: { type: String, default: "active" },
+    startedAt: { type: String },
+    updatedAt: { type: String },
+    stripeCustomerId: { type: String, default: null, index: true },
+    stripeSubscriptionId: { type: String, default: null },
+    currentPeriodEnd: { type: String, default: null },
+    cancelAtPeriodEnd: { type: Boolean, default: false },
+  },
+  { versionKey: false }
+);
+
+const Subscription = mongoose.models.Subscription || mongoose.model("Subscription", subscriptionSchema);
 const AVAILABLE_PLANS = [
   {
     id: "free",
@@ -89,54 +105,67 @@ const PLAN_BY_STRIPE_PRICE = Object.entries(STRIPE_PRICE_BY_PLAN).reduce((acc, [
   return acc;
 }, {});
 
-const readSubscriptions = async () => {
-  try {
-    const raw = await fs.readFile(SUBSCRIPTIONS_FILE, "utf-8");
-    const parsed = JSON.parse(raw);
-    return typeof parsed === "object" && parsed ? parsed : {};
-  } catch (error) {
-    if (error.code === "ENOENT") {
-      await fs.mkdir(path.dirname(SUBSCRIPTIONS_FILE), { recursive: true });
-      await fs.writeFile(SUBSCRIPTIONS_FILE, JSON.stringify({}, null, 2), "utf-8");
-      return {};
-    }
+const canUseMongoSubscriptions = () => Boolean(process.env.MONGO_URI) && mongoose.connection.readyState === 1;
 
-    throw error;
-  }
-};
+const toSubscriptionPayload = (previous, partialSubscription) => ({
+  plan: previous?.plan || "free",
+  status: previous?.status || "active",
+  startedAt: previous?.startedAt || new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+  ...previous,
+  ...partialSubscription,
+});
 
-const writeSubscriptions = async (subscriptions) => {
-  await fs.mkdir(path.dirname(SUBSCRIPTIONS_FILE), { recursive: true });
-  await fs.writeFile(SUBSCRIPTIONS_FILE, JSON.stringify(subscriptions, null, 2), "utf-8");
+const stripUserId = (record) => {
+  if (!record) return null;
+  const { userId, ...rest } = record;
+  return rest;
 };
 
 const upsertSubscription = async (userId, partialSubscription) => {
-  const subscriptions = await readSubscriptions();
-  const previous = subscriptions[userId] || {};
+  if (canUseMongoSubscriptions()) {
+    const previous = await Subscription.findOne({ userId }).lean();
+    const payload = toSubscriptionPayload(previous, partialSubscription);
+    const updated = await Subscription.findOneAndUpdate(
+      { userId },
+      { userId, ...payload },
+      {
+        new: true,
+        upsert: true,
+        setDefaultsOnInsert: true,
+      }
+    ).lean();
 
-  subscriptions[userId] = {
-    plan: previous.plan || "free",
-    status: previous.status || "active",
-    startedAt: previous.startedAt || new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    ...previous,
-    ...partialSubscription,
-  };
+    return stripUserId(updated);
+  }
 
-  await writeSubscriptions(subscriptions);
-  return subscriptions[userId];
+  const previous = inMemorySubscriptions.get(userId) || null;
+  const payload = toSubscriptionPayload(previous, partialSubscription);
+  inMemorySubscriptions.set(userId, payload);
+  return payload;
 };
 
 const getSubscriptionByUserId = async (userId) => {
-  const subscriptions = await readSubscriptions();
-  return subscriptions[userId] || null;
+  if (canUseMongoSubscriptions()) {
+    const subscription = await Subscription.findOne({ userId }).lean();
+    return stripUserId(subscription);
+  }
+
+  return inMemorySubscriptions.get(userId) || null;
 };
 
 const getUserIdByStripeCustomerId = async (stripeCustomerId) => {
   if (!stripeCustomerId) return null;
 
-  const subscriptions = await readSubscriptions();
-  return Object.entries(subscriptions).find(([, value]) => value?.stripeCustomerId === stripeCustomerId)?.[0] || null;
+  if (canUseMongoSubscriptions()) {
+    const subscription = await Subscription.findOne({ stripeCustomerId }).select({ userId: 1, _id: 0 }).lean();
+    return subscription?.userId || null;
+  }
+
+  return (
+    [...inMemorySubscriptions.entries()].find(([, value]) => value?.stripeCustomerId === stripeCustomerId)?.[0] ||
+    null
+  );
 };
 
 const buildStripeSubscriptionSnapshot = (stripeSubscription, fallbackPlan = "free") => {
