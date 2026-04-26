@@ -76,6 +76,47 @@ Frontend env:
 
 - `VITE_API_BASE_URL=http://localhost:5000`
 
+## Auth + Session Configuration (Important)
+
+For OAuth login to persist correctly in production (frontend and backend on different domains), use cross-site cookie-safe settings.
+
+Backend requirements:
+
+- CORS must allow credentials:
+
+```js
+app.use(
+	cors({
+		origin: FRONTEND_URL,
+		credentials: true,
+	})
+);
+```
+
+- Auth cookie must be cross-site compatible in production:
+
+```js
+const COOKIE_OPTIONS = {
+	path: "/",
+	sameSite: "none",
+	secure: process.env.NODE_ENV === "production",
+};
+```
+
+Frontend requirements:
+
+- Always call auth endpoints with credentials enabled:
+
+```js
+axios.get(`${API_BASE_URL}/auth/me`, { withCredentials: true });
+```
+
+or
+
+```js
+fetch(`${API_BASE_URL}/auth/me`, { credentials: "include" });
+```
+
 ## Docs
 
 - Backend API and deployment details: [backend/README.md](backend/README.md)
@@ -102,3 +143,30 @@ Frontend env:
 
 - Backend now exposes `GET /auth/me` so frontend can re-sync logged-in user state after OAuth redirect.
 - Backend exposes `POST /auth/logout` to clear server cookie explicitly.
+- Frontend should call `GET /auth/me` on app load (or immediately after OAuth redirect) to hydrate authenticated user state.
+
+## Troubleshooting: Login Success But Profile Missing
+
+If OAuth shows success but profile UI is empty, session cookie is usually not being sent.
+
+Check in this order:
+
+1. Confirm `/auth/me` returns user:
+
+```js
+fetch("https://YOUR_BACKEND_URL/auth/me", { credentials: "include" })
+	.then((res) => res.json())
+	.then(console.log);
+```
+
+2. Verify cookie flags on backend auth cookie:
+- `sameSite: "none"`
+- `secure: true` in production
+
+3. Verify backend CORS:
+- `origin` is exact frontend URL
+- `credentials: true`
+
+4. Verify frontend request config:
+- `withCredentials: true` (axios)
+- `credentials: "include"` (fetch)
