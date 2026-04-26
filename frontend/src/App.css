@@ -242,6 +242,13 @@
   background: #334155;
 }
 
+.suggestion-state {
+  justify-content: center;
+  color: #94a3b8;
+  font-size: 0.9rem;
+  cursor: default;
+}
+
 .avatar {
   width: 28px;
   height: 28px;

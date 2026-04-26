@@ -34,6 +34,7 @@ export default function App() {
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
   const [debounceTimer, setDebounceTimer] = useState(null)
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false)
   const [languageFilter, setLanguageFilter] = useState('all')
   const [sortBy, setSortBy] = useState('stars')
   const [includeForks, setIncludeForks] = useState(true)
@@ -107,18 +108,22 @@ export default function App() {
       if (!query.trim()) {
         setSuggestions([])
         setActiveIndex(-1)
+        setSuggestionsLoading(false)
         return
       }
 
       try {
+        setSuggestionsLoading(true)
         const res = await axios.get(
-          `https://api.github.com/search/users?q=${encodeURIComponent(query)}&per_page=5`
+          `${API_BASE_URL}/api/github/search/users?q=${encodeURIComponent(query)}&per_page=5`
         )
         setSuggestions(res.data.items || [])
         setActiveIndex(-1)
       } catch {
         setSuggestions([])
         setActiveIndex(-1)
+      } finally {
+        setSuggestionsLoading(false)
       }
     }, 400)
 
@@ -163,6 +168,7 @@ export default function App() {
       setShowSuggestions(false)
       setSuggestions([])
       setActiveIndex(-1)
+      setSuggestionsLoading(false)
 
       const [profileRes, repoRes] = await Promise.all([
         axios.get(`${API_BASE_URL}/api/github/${trimmed}`),
@@ -274,23 +280,29 @@ export default function App() {
                   }}
                   onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                 />
-                {showSuggestions && suggestions.length > 0 && (
+                {showSuggestions && (suggestionsLoading || suggestions.length > 0) && (
                   <div className="suggestions-list">
-                    {suggestions.map((user, index) => (
-                      <div
-                        key={user.id}
-                        className={`suggestion-item ${index === activeIndex ? 'active' : ''}`}
-                        onMouseEnter={() => setActiveIndex(index)}
-                        onClick={() => {
-                          setUsername(user.login)
-                          setShowSuggestions(false)
-                          handleSearch(user.login)
-                        }}
-                      >
-                        <img src={user.avatar_url} alt="" className="avatar" />
-                        <span>{user.login}</span>
-                      </div>
-                    ))}
+                    {suggestionsLoading ? (
+                      <div className="suggestion-item suggestion-state">Loading suggestions...</div>
+                    ) : suggestions.length > 0 ? (
+                      suggestions.map((user, index) => (
+                        <div
+                          key={user.id}
+                          className={`suggestion-item ${index === activeIndex ? 'active' : ''}`}
+                          onMouseEnter={() => setActiveIndex(index)}
+                          onClick={() => {
+                            setUsername(user.login)
+                            setShowSuggestions(false)
+                            handleSearch(user.login)
+                          }}
+                        >
+                          <img src={user.avatar_url} alt="" className="avatar" />
+                          <span>{user.login}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="suggestion-item suggestion-state">No suggestions found</div>
+                    )}
                   </div>
                 )}
               </div>
@@ -331,23 +343,29 @@ export default function App() {
                   }}
                   onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                 />
-                {showSuggestions && suggestions.length > 0 && (
+                {showSuggestions && (suggestionsLoading || suggestions.length > 0) && (
                   <div className="suggestions-list">
-                    {suggestions.map((user, index) => (
-                      <div
-                        key={user.id}
-                        className={`suggestion-item ${index === activeIndex ? 'active' : ''}`}
-                        onMouseEnter={() => setActiveIndex(index)}
-                        onClick={() => {
-                          setUsername(user.login)
-                          setShowSuggestions(false)
-                          handleSearch(user.login)
-                        }}
-                      >
-                        <img src={user.avatar_url} alt="" className="avatar" />
-                        <span>{user.login}</span>
-                      </div>
-                    ))}
+                    {suggestionsLoading ? (
+                      <div className="suggestion-item suggestion-state">Loading suggestions...</div>
+                    ) : suggestions.length > 0 ? (
+                      suggestions.map((user, index) => (
+                        <div
+                          key={user.id}
+                          className={`suggestion-item ${index === activeIndex ? 'active' : ''}`}
+                          onMouseEnter={() => setActiveIndex(index)}
+                          onClick={() => {
+                            setUsername(user.login)
+                            setShowSuggestions(false)
+                            handleSearch(user.login)
+                          }}
+                        >
+                          <img src={user.avatar_url} alt="" className="avatar" />
+                          <span>{user.login}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="suggestion-item suggestion-state">No suggestions found</div>
+                    )}
                   </div>
                 )}
               </div>
