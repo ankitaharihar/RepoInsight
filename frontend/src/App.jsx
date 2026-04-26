@@ -6,6 +6,22 @@ import Charts from './components/Charts'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
 const AUTH_TOKEN_KEY = 'repoinsight_auth_token'
+const AXIOS_INTERCEPTOR_FLAG = '__repoinsight_auth_interceptor__'
+
+// Attach token globally once.
+if (!globalThis[AXIOS_INTERCEPTOR_FLAG]) {
+  axios.interceptors.request.use((config) => {
+    const token = localStorage.getItem(AUTH_TOKEN_KEY)
+    if (token) {
+      config.headers = {
+        ...(config.headers || {}),
+        Authorization: `Bearer ${token}`,
+      }
+    }
+    return config
+  })
+  globalThis[AXIOS_INTERCEPTOR_FLAG] = true
+}
 
 export default function App() {
   const [authUser, setAuthUser] = useState(null)
@@ -19,22 +35,6 @@ export default function App() {
   const [includeForks, setIncludeForks] = useState(true)
 
   const location = useLocation()
-
-  // Attach Authorization header automatically when token exists.
-  useEffect(() => {
-    const interceptorId = axios.interceptors.request.use((config) => {
-      const token = localStorage.getItem(AUTH_TOKEN_KEY)
-      if (token) {
-        config.headers = {
-          ...(config.headers || {}),
-          Authorization: `Bearer ${token}`,
-        }
-      }
-      return config
-    })
-
-    return () => axios.interceptors.request.eject(interceptorId)
-  }, [])
 
   // Handle OAuth callback token once, then hard reload for clean app bootstrap.
   useEffect(() => {
