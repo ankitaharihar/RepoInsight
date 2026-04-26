@@ -178,13 +178,29 @@ export default function App() {
       setActiveIndex(-1)
       setSuggestionsLoading(false)
 
-      const [profileRes, repoRes] = await Promise.all([
-        axios.get(`${API_BASE_URL}/api/github/${trimmed}`),
-        axios.get(`${API_BASE_URL}/api/github/${trimmed}/repos?page=1&per_page=100`),
-      ])
+      const fetchProfile = async () => {
+        try {
+          return await axios.get(`${API_BASE_URL}/api/github/${trimmed}`)
+        } catch {
+          return axios.get(`${API_BASE_URL}/api/github?username=${encodeURIComponent(trimmed)}`)
+        }
+      }
+
+      const fetchRepos = async () => {
+        try {
+          return await axios.get(`${API_BASE_URL}/api/github/${trimmed}/repos?page=1&per_page=100`)
+        } catch {
+          return axios.get(`${API_BASE_URL}/api/repos?username=${encodeURIComponent(trimmed)}&page=1&per_page=100`)
+        }
+      }
+
+      const [profileRes, repoRes] = await Promise.all([fetchProfile(), fetchRepos()])
+      const normalizedRepos = Array.isArray(repoRes.data)
+        ? repoRes.data
+        : (repoRes.data?.data || [])
 
       setUserData(profileRes.data)
-      setRepos(repoRes.data?.data || [])
+      setRepos(normalizedRepos)
     } catch {
       setUserData(null)
       setRepos([])
