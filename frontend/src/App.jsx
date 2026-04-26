@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import axios from 'axios'
 import './App.css'
 import Charts from './components/Charts'
@@ -7,9 +7,22 @@ import FileExplorer from './components/FileExplorer'
 import RepoModal from './components/RepoModal'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
+const AUTH_TOKEN_KEY = 'repoinsight_auth_token'
+
+const getAuthToken = () => {
+  try {
+    return localStorage.getItem(AUTH_TOKEN_KEY)
+  } catch {
+    return null
+  }
+}
+
+const buildAuthHeaders = () => {
+  const token = getAuthToken()
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
 
 export default function App() {
-  const AUTH_RELOAD_FLAG = 'repoinight_auth_reload_done'
   const [authUser, setAuthUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [username, setUsername] = useState('')
@@ -28,7 +41,6 @@ export default function App() {
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
 
-  const navigate = useNavigate()
   const location = useLocation()
 
   // Sync auth state on mount and OAuth redirect
@@ -36,33 +48,21 @@ export default function App() {
     syncAuthState()
   }, [])
 
-  // Sync auth on query params (OAuth callback)
+  // Handle OAuth callback params and sync auth state.
   useEffect(() => {
     const params = new URLSearchParams(location.search)
-    if (params.has('code') || params.has('login_success')) {
+    const tokenFromCallback = params.get('token')
+
+    if (tokenFromCallback) {
+      localStorage.setItem(AUTH_TOKEN_KEY, tokenFromCallback)
+    }
+
+    if (params.has('code') || params.has('login_success') || tokenFromCallback) {
       console.log('🔐 OAuth callback detected, syncing auth state...')
       window.history.replaceState({}, document.title, location.pathname)
       syncAuthState()
     }
   }, [location.search])
-
-  // Safety: if callback returned but auth cookie is still not visible, do one hard refresh.
-  useEffect(() => {
-    const params = new URLSearchParams(location.search)
-    const shouldForceReload = params.has('login_success') && !sessionStorage.getItem(AUTH_RELOAD_FLAG)
-
-    if (!shouldForceReload) return
-
-    sessionStorage.setItem(AUTH_RELOAD_FLAG, '1')
-    console.log('🔄 Forcing one reload after OAuth callback...')
-    window.location.reload()
-  }, [location.search])
-
-  useEffect(() => {
-    if (authUser && sessionStorage.getItem(AUTH_RELOAD_FLAG)) {
-      sessionStorage.removeItem(AUTH_RELOAD_FLAG)
-    }
-  }, [authUser])
 
   const syncAuthState = async () => {
     try {
@@ -74,6 +74,7 @@ export default function App() {
       
       const response = await axios.get(`${API_BASE_URL}/auth/me`, {
         withCredentials: true,
+        headers: buildAuthHeaders(),
       })
       
       console.log('✅ /auth/me response:', response.data)
@@ -98,7 +99,10 @@ export default function App() {
     try {
       const response = await axios.get(
         `${API_BASE_URL}/api/search-history/${userId}`,
-        { withCredentials: true }
+        {
+          withCredentials: true,
+          headers: buildAuthHeaders(),
+        }
       )
       setSearchHistory(response.data?.history || [])
     } catch (err) {
@@ -110,7 +114,9 @@ export default function App() {
     try {
       await axios.post(`${API_BASE_URL}/auth/logout`, {}, {
         withCredentials: true,
+        headers: buildAuthHeaders(),
       })
+      localStorage.removeItem(AUTH_TOKEN_KEY)
       setAuthUser(null)
       setUsername('')
       setRepos([])
@@ -152,7 +158,10 @@ export default function App() {
         await axios.post(
           `${API_BASE_URL}/api/search-history`,
           { username: searchUsername },
-          { withCredentials: true }
+          {
+            withCredentials: true,
+            headers: buildAuthHeaders(),
+          }
         ).catch(() => {})
       }
     } catch (err) {

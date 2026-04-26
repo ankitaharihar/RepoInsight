@@ -46,6 +46,7 @@ Create a `.env` file in the backend folder with these values:
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
 - `GITHUB_TOKEN` - optional, improves GitHub API rate limits for proxy requests
+- `JWT_SECRET` - required in production for signing and verifying bearer auth tokens
 - `STRIPE_SECRET_KEY` - required for paid checkout and subscription actions
 - `STRIPE_WEBHOOK_SECRET` - required to verify Stripe webhook events
 - `STRIPE_PRICE_PRO_MONTHLY` - Stripe recurring price ID for Pro plan

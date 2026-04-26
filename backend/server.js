@@ -9,9 +9,12 @@ const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const nodemailer = require("nodemailer");
 const Stripe = require("stripe");
+const jwt = require("jsonwebtoken");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const AUTH_TOKEN_SECRET = process.env.JWT_SECRET || process.env.AUTH_TOKEN_SECRET || "repoinsight-dev-secret";
+const AUTH_TOKEN_TTL = "7d";
 
 if (process.env.MONGO_URI) {
   if (mongoose.connection.readyState === 0) {
@@ -199,8 +202,32 @@ const readAuthUserFromCookie = (req) => {
   }
 };
 
+const signAuthToken = (user) => {
+  return jwt.sign({ user }, AUTH_TOKEN_SECRET, {
+    expiresIn: AUTH_TOKEN_TTL,
+  });
+};
+
+const readAuthUserFromToken = (req) => {
+  const authHeader = req.headers?.authorization || "";
+  if (!authHeader.toLowerCase().startsWith("bearer ")) return null;
+
+  const token = authHeader.slice(7).trim();
+  if (!token) return null;
+
+  try {
+    const payload = jwt.verify(token, AUTH_TOKEN_SECRET);
+    if (!payload?.user?.id) return null;
+    return payload.user;
+  } catch {
+    return null;
+  }
+};
+
+const resolveAuthUser = (req) => readAuthUserFromToken(req) || readAuthUserFromCookie(req);
+
 const requireAuthUser = (req, res, next) => {
-  const user = readAuthUserFromCookie(req);
+  const user = resolveAuthUser(req);
 
   if (!user?.id) {
     return res.status(401).json({ message: "Authentication required" });
@@ -442,7 +469,7 @@ app.get("/auth/config", (req, res) => {
 });
 
 app.get("/auth/me", (req, res) => {
-  const user = readAuthUserFromCookie(req);
+  const user = resolveAuthUser(req);
 
   if (!user?.id) {
     return res.json({ user: null });
@@ -529,8 +556,9 @@ app.get("/auth/github/callback", async (req, res) => {
     });
     await sendLoginEmail(user);
     storeAuthUser(res, user);
+    const authToken = signAuthToken(user);
 
-    return redirectToFrontend(res, { login_success: "github" });
+    return redirectToFrontend(res, { login_success: "github", token: authToken });
   } catch (err) {
     console.error("GitHub auth callback error:", err);
     return redirectToFrontend(res, { login_error: "github_callback_failed" });
@@ -600,8 +628,9 @@ app.get("/auth/google/callback", async (req, res) => {
     });
     await sendLoginEmail(user);
     storeAuthUser(res, user);
+    const authToken = signAuthToken(user);
 
-    return redirectToFrontend(res, { login_success: "google" });
+    return redirectToFrontend(res, { login_success: "google", token: authToken });
   } catch (err) {
     console.error("Google auth callback error:", err);
     return redirectToFrontend(res, { login_error: "google_callback_failed" });
