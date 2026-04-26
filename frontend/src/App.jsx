@@ -100,6 +100,13 @@ export default function App() {
   }, [debounceTimer])
 
   const handleSuggestionSearch = (query) => {
+    if (!authUser) {
+      setSuggestions([])
+      setShowSuggestions(false)
+      setActiveIndex(-1)
+      return
+    }
+
     if (debounceTimer) {
       clearTimeout(debounceTimer)
     }
@@ -210,6 +217,21 @@ export default function App() {
     }
   }
 
+  const handleAnalyzeAction = (candidate = username) => {
+    if (!authUser) {
+      setError('Please login first')
+      return
+    }
+
+    handleSearch(candidate)
+  }
+
+  const selectSuggestion = (login) => {
+    setUsername(login)
+    setShowSuggestions(false)
+    handleSearch(login)
+  }
+
   const filteredRepos = useMemo(() => {
     let next = [...repos]
 
@@ -280,8 +302,9 @@ export default function App() {
               <div className="search-input-wrap">
                 <input
                   type="text"
-                  placeholder="Enter GitHub username (e.g., torvalds)"
+                  placeholder="Login first to search usernames"
                   value={username}
+                  disabled
                   onChange={(e) => {
                     const nextValue = e.target.value
                     setUsername(nextValue)
@@ -294,8 +317,9 @@ export default function App() {
                     } else if (e.key === 'ArrowUp') {
                       setActiveIndex((prev) => (prev > 0 ? prev - 1 : 0))
                     } else if (e.key === 'Enter') {
+                      e.preventDefault()
                       if (activeIndex >= 0) {
-                        handleSearch(suggestions[activeIndex].login)
+                        handleAnalyzeAction(suggestions[activeIndex].login)
                         setShowSuggestions(false)
                       } else {
                         setError('Please login first')
@@ -314,10 +338,9 @@ export default function App() {
                           key={user.id}
                           className={`suggestion-item ${index === activeIndex ? 'active' : ''}`}
                           onMouseEnter={() => setActiveIndex(index)}
-                          onClick={() => {
-                            setUsername(user.login)
-                            setShowSuggestions(false)
-                            handleSearch(user.login)
+                          onPointerDown={(event) => {
+                            event.preventDefault()
+                            selectSuggestion(user.login)
                           }}
                         >
                           <img src={user.avatar_url} alt="" className="avatar" />
@@ -330,7 +353,7 @@ export default function App() {
                   </div>
                 )}
               </div>
-              <button onClick={() => setError('Please login first')} className="btn-primary">Analyze</button>
+              <button onClick={() => handleAnalyzeAction()} className="btn-primary" disabled>Analyze</button>
             </div>
             <p className="landing-hint">Get profile score, AI insights, and repo-level analytics in one clean workflow.</p>
             <p className="landing-login-hint">Sign in to unlock search history and full analytics.</p>
@@ -357,11 +380,12 @@ export default function App() {
                     } else if (e.key === 'ArrowUp') {
                       setActiveIndex((prev) => (prev > 0 ? prev - 1 : 0))
                     } else if (e.key === 'Enter') {
+                      e.preventDefault()
                       if (activeIndex >= 0) {
-                        handleSearch(suggestions[activeIndex].login)
+                        handleAnalyzeAction(suggestions[activeIndex].login)
                         setShowSuggestions(false)
                       } else {
-                        handleSearch()
+                        handleAnalyzeAction()
                       }
                     }
                   }}
@@ -377,10 +401,9 @@ export default function App() {
                           key={user.id}
                           className={`suggestion-item ${index === activeIndex ? 'active' : ''}`}
                           onMouseEnter={() => setActiveIndex(index)}
-                          onClick={() => {
-                            setUsername(user.login)
-                            setShowSuggestions(false)
-                            handleSearch(user.login)
+                          onPointerDown={(event) => {
+                            event.preventDefault()
+                            selectSuggestion(user.login)
                           }}
                         >
                           <img src={user.avatar_url} alt="" className="avatar" />
@@ -393,7 +416,7 @@ export default function App() {
                   </div>
                 )}
               </div>
-              <button onClick={() => handleSearch()} className="btn-primary">Analyze</button>
+              <button onClick={() => handleAnalyzeAction()} className="btn-primary">Analyze</button>
             </div>
             {error && <p className="error-message">{error}</p>}
           </div>
