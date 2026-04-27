@@ -1,26 +1,36 @@
 # RepoInsight
 
-RepoInsight is a full-stack GitHub analysis app with a React + Vite frontend and an Express backend. It supports profile analysis, repository insights, OAuth login (GitHub/Google), and subscription/billing workflows.
+RepoInsight is a full-stack GitHub analytics app with a React (Vite) frontend and an Express backend. It supports OAuth login, profile and repository analysis, activity/insight endpoints, and subscription flows (including Stripe checkout/webhooks).
 
-## Monorepo Structure
+## Project Structure
 
 ```text
 RepoInsight/
-├─ api/                  # Vercel serverless entrypoints
-├─ backend/              # Express API and OAuth logic
-├─ frontend/             # React + Vite dashboard
-├─ netlify.toml          # Netlify frontend build config
-├─ vercel.json           # Vercel route config
-└─ package.json          # root scripts (runs both apps in dev)
+├─ api/                       # Serverless entrypoints (Vercel)
+│  ├─ index.js                # Uses backend Express app
+│  ├─ github.js               # Lightweight profile proxy
+│  ├─ repos.js                # Lightweight repos proxy
+│  └─ user.js                 # Lightweight user search proxy
+├─ backend/                   # Main Express API
+│  ├─ server.js
+│  └─ README.md
+├─ frontend/                  # React + Vite app
+│  ├─ src/
+│  ├─ netlify/functions/      # Netlify helper functions
+│  └─ README.md
+├─ netlify.toml
+├─ vercel.json
+└─ package.json               # Root dev scripts
 ```
 
-## Features
+## Key Features
 
-- GitHub user search and profile analysis.
-- Repository insights: stars, forks, languages, activity trends.
-- OAuth login via GitHub and Google.
-- Auth-aware UI with profile menu and history.
-- Billing plan endpoints and Stripe checkout/webhook integration.
+- OAuth login with GitHub and Google via backend auth routes.
+- Bearer token based frontend session sync (`token` returned on OAuth callback).
+- GitHub profile and repository analytics with filters, sorting, and charts.
+- User search suggestions with backend and direct GitHub fallback.
+- Insights endpoints for activity windows, language breakdown, and top repositories.
+- Billing plan endpoints and Stripe checkout/subscription lifecycle handlers.
 
 ## Prerequisites
 
@@ -37,90 +47,105 @@ npm install --prefix frontend
 
 ## Run Locally
 
-Run both apps from root:
+Start both frontend and backend from the repository root:
 
 ```bash
 npm run dev
 ```
 
-Or run separately:
+Or run each app separately:
 
 ```bash
 npm run dev:backend
 npm run dev:frontend
 ```
 
-Default local URLs:
+Default development URLs:
 
 - Frontend: `http://localhost:5173`
 - Backend: `http://localhost:5000`
 
-## Scripts
+## Available Scripts
 
-- Root: `npm run dev`, `npm run dev:backend`, `npm run dev:frontend`
-- Backend: `npm run dev`, `npm start`
-- Frontend: `npm run dev`, `npm run build`, `npm run preview`, `npm run lint`
+- Root:
+	- `npm run dev`
+	- `npm run dev:backend`
+	- `npm run dev:frontend`
+- Backend:
+	- `npm run dev`
+	- `npm start`
+- Frontend:
+	- `npm run dev`
+	- `npm run build`
+	- `npm run preview`
+	- `npm run lint`
 
-## Environment Setup
+## Environment Variables
 
-Backend `.env` should include at minimum:
+### Backend (`backend/.env`)
+
+Core values:
 
 - `FRONTEND_URL=http://localhost:5173`
 - `BACKEND_URL=http://localhost:5000`
-- `MONGO_URI=...` (recommended for persistent subscription data)
+- `JWT_SECRET=your-secret`
+- `MONGO_URI=...` (recommended for persistent subscriptions)
+- `GITHUB_TOKEN=...` (recommended to reduce rate-limit issues)
+
+OAuth values:
+
 - `GITHUB_CLIENT_ID=...`
 - `GITHUB_CLIENT_SECRET=...`
-- `GITHUB_CALLBACK_URL=http://localhost:5000/auth/github/callback`
+- `GITHUB_CALLBACK_URL=http://localhost:5000/auth/github/callback` (optional; auto-derived if omitted)
+- `GOOGLE_CLIENT_ID=...`
+- `GOOGLE_CLIENT_SECRET=...`
 
-Frontend env:
+Stripe values (only if billing is enabled):
+
+- `STRIPE_SECRET_KEY=...`
+- `STRIPE_WEBHOOK_SECRET=...`
+- `STRIPE_PRICE_PRO_MONTHLY=...`
+- `STRIPE_PRICE_TEAM_MONTHLY=...`
+
+Email notification values (optional):
+
+- `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USER`, `EMAIL_PASS`, `EMAIL_FROM`, `EMAIL_SECURE`
+
+### Frontend (`frontend/.env`)
 
 - `VITE_API_BASE_URL=http://localhost:5000`
 
-## Auth + Session Configuration (Important)
+## API Summary
 
-For OAuth login to persist correctly in production (frontend and backend on different domains), use cross-site cookie-safe settings.
+Main backend routes include:
 
-Backend requirements:
-
-- CORS must allow credentials:
-
-```js
-app.use(
-	cors({
-		origin: FRONTEND_URL,
-		credentials: true,
-	})
-);
-```
-
-- Auth cookie must be cross-site compatible in production:
-
-```js
-const COOKIE_OPTIONS = {
-	path: "/",
-	sameSite: "none",
-	secure: process.env.NODE_ENV === "production",
-};
-```
-
-Frontend requirements:
-
-- Always call auth endpoints with credentials enabled:
-
-```js
-axios.get(`${API_BASE_URL}/auth/me`, { withCredentials: true });
-```
-
-or
-
-```js
-fetch(`${API_BASE_URL}/auth/me`, { credentials: "include" });
-```
-
-## Docs
-
-- Backend API and deployment details: [backend/README.md](backend/README.md)
-- Frontend UI and OAuth behavior: [frontend/README.md](frontend/README.md)
+- Auth:
+	- `GET /auth/config`
+	- `GET /auth/me`
+	- `POST /auth/logout`
+	- `GET /auth/github`
+	- `GET /auth/google`
+	- `GET /auth/github/callback`
+	- `GET /auth/google/callback`
+- GitHub data:
+	- `GET /api/github/search/users`
+	- `GET /api/github/:username`
+	- `GET /api/github/:username/repos`
+	- `GET /api/github/:username/activity`
+	- `GET /api/github/:username/languages`
+	- `GET /api/github/:username/insights`
+- Compatibility routes:
+	- `GET /api/github?username=...`
+	- `GET /api/repos?username=...`
+	- `GET /api/user?q=...`
+- Billing:
+	- `GET /api/billing/plans`
+	- `GET /api/billing/subscription`
+	- `POST /api/billing/subscription`
+	- `POST /api/billing/checkout-session`
+	- `POST /api/billing/subscription/cancel`
+	- `POST /api/billing/subscription/resume`
+	- `POST /api/billing/stripe/webhook`
 
 ## Deployment Notes
 
@@ -129,44 +154,41 @@ fetch(`${API_BASE_URL}/auth/me`, { credentials: "include" });
 - Base directory: `frontend`
 - Build command: `npm run build`
 - Publish directory: `dist`
-- Required env: `VITE_API_BASE_URL=<your-backend-url>`
+- Required env var: `VITE_API_BASE_URL=<deployed-backend-url>`
+
+Optional Netlify function env var for better search-user reliability:
+
+- `GITHUB_TOKEN=<token>`
 
 ### Backend (Vercel/Railway/Render/etc.)
 
-- Set required OAuth and Stripe env vars.
-- Set `FRONTEND_URL` to deployed frontend URL.
-- Set `BACKEND_URL` to deployed backend URL.
-- Set `GITHUB_CALLBACK_URL` to exact callback registered in GitHub OAuth app.
-- Use MongoDB (`MONGO_URI`) for durable subscription storage.
+- Configure all required env vars from the backend section above.
+- Set `FRONTEND_URL` to your deployed frontend origin.
+- Set `BACKEND_URL` to deployed backend origin if you do not want auto-derivation.
+- Ensure OAuth callback URLs in GitHub/Google apps exactly match deployed callback URLs.
 
-### OAuth Reliability
+## Troubleshooting
 
-- Backend now exposes `GET /auth/me` so frontend can re-sync logged-in user state after OAuth redirect.
-- Backend exposes `POST /auth/logout` to clear server cookie explicitly.
-- Frontend should call `GET /auth/me` on app load (or immediately after OAuth redirect) to hydrate authenticated user state.
+### `concurrently` not found when running root dev command
 
-## Troubleshooting: Login Success But Profile Missing
+Run this at repository root:
 
-If OAuth shows success but profile UI is empty, session cookie is usually not being sent.
-
-Check in this order:
-
-1. Confirm `/auth/me` returns user:
-
-```js
-fetch("https://YOUR_BACKEND_URL/auth/me", { credentials: "include" })
-	.then((res) => res.json())
-	.then(console.log);
+```bash
+npm install
 ```
 
-2. Verify cookie flags on backend auth cookie:
-- `sameSite: "none"`
-- `secure: true` in production
+### Login succeeds but app still appears signed out
 
-3. Verify backend CORS:
-- `origin` is exact frontend URL
-- `credentials: true`
+- Verify OAuth callback includes a `token` query param.
+- Verify the frontend can call `GET /auth/me` on `VITE_API_BASE_URL`.
+- Confirm `JWT_SECRET` is set and stable in backend environment.
 
-4. Verify frontend request config:
-- `withCredentials: true` (axios)
-- `credentials: "include"` (fetch)
+### GitHub rate-limit issues
+
+- Set `GITHUB_TOKEN` on backend.
+- For Netlify search function fallback, also set `GITHUB_TOKEN` in Netlify env vars.
+
+## Additional Docs
+
+- Backend details: [backend/README.md](backend/README.md)
+- Frontend details: [frontend/README.md](frontend/README.md)
