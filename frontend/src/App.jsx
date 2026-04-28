@@ -254,6 +254,29 @@ export default function App() {
     return next
   }, [repos, languageFilter, includeForks, sortBy])
 
+  // Get top 3 repos by stars for highlighting
+  const topRepos = useMemo(() => {
+    return [...repos]
+      .sort((a, b) => (b.stargazers_count || 0) - (a.stargazers_count || 0))
+      .slice(0, 3)
+      .map((r) => r.id)
+  }, [repos])
+
+  // Format date helper
+  const formatDate = (dateString) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffTime = Math.abs(now - date)
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+    if (diffDays === 0) return 'Updated today'
+    if (diffDays === 1) return 'Updated yesterday'
+    if (diffDays < 7) return `Updated ${diffDays} days ago`
+    if (diffDays < 30) return `Updated ${Math.floor(diffDays / 7)} weeks ago`
+    if (diffDays < 365) return `Updated ${Math.floor(diffDays / 30)} months ago`
+    return `Updated ${Math.floor(diffDays / 365)} years ago`
+  }
+
   if (loading && !authUser) {
     return (
       <div className="app-container">
@@ -373,7 +396,13 @@ export default function App() {
         </div>
       ) : (
         <div className="dashboard">
+          <div className="hero-section">
+            <h1>Analyze GitHub Profiles Instantly</h1>
+            <p>Get insights, skills & activity in seconds</p>
+          </div>
+
           <div className="search-section">
+            <div className="search-wrapper">
             <div className="search-box">
               <div className="search-input-wrap">
                 <input
@@ -443,6 +472,7 @@ export default function App() {
               </button>
             </div>
             {error && <p className="error-message">{error}</p>}
+            </div>
           </div>
 
           {userData && (
@@ -480,13 +510,18 @@ export default function App() {
 
                 <div className="repo-list">
                   {filteredRepos.map((repo) => (
-                    <div key={repo.id} className="repo-card">
+                    <div key={repo.id} className={`repo-card ${topRepos.includes(repo.id) ? 'top-repo' : ''}`}>
+                      {topRepos.includes(repo.id) && <div className="top-badge">⭐ Top Repo</div>}
                       <h3>{repo.name}</h3>
                       <p>{repo.description || 'No description'}</p>
                       <div className="repo-stats">
-                        <span>Stars {repo.stargazers_count}</span>
-                        <span>Forks {repo.forks_count}</span>
-                        <span>{repo.language || 'N/A'}</span>
+                        <span title="Stars">⭐ {repo.stargazers_count}</span>
+                        <span title="Forks">🍴 {repo.forks_count}</span>
+                        <span title="Language">{repo.language || '—'}</span>
+                      </div>
+                      <div className="repo-meta">
+                        <span>{formatDate(repo.updated_at)}</span>
+                        {repo.fork && <span className="fork-badge">forked</span>}
                       </div>
                     </div>
                   ))}

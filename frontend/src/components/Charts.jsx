@@ -320,6 +320,124 @@ export function DeveloperScoreCard({ userData, repos = [], theme = "dark" }) {
   );
 }
 
+// 👤 PROFILE CARD COMPONENT
+export function ProfileCard({ userData = {}, theme = "dark" }) {
+  const isLight = theme === "light";
+  
+  return (
+    <div className={`profile-card ${isLight ? 'light' : 'dark'}`}>
+      <div className="profile-header">
+        <img src={userData?.avatar_url} alt={userData?.login} className="profile-avatar" />
+        <div className="profile-info">
+          <h2>{userData?.name || userData?.login || 'Unknown'}</h2>
+          <p className="profile-login">@{userData?.login}</p>
+          {userData?.bio && <p className="profile-bio">{userData?.bio}</p>}
+        </div>
+      </div>
+
+      <div className="profile-stats">
+        <div className="stat-item">
+          <span className="stat-label">Followers</span>
+          <span className="stat-value">{userData?.followers?.toLocaleString() || 0}</span>
+        </div>
+        <div className="stat-item">
+          <span className="stat-label">Following</span>
+          <span className="stat-value">{userData?.following?.toLocaleString() || 0}</span>
+        </div>
+        <div className="stat-item">
+          <span className="stat-label">Public Repos</span>
+          <span className="stat-value">{userData?.public_repos?.toLocaleString() || 0}</span>
+        </div>
+        <div className="stat-item">
+          <span className="stat-label">Public Gists</span>
+          <span className="stat-value">{userData?.public_gists?.toLocaleString() || 0}</span>
+        </div>
+      </div>
+
+      {userData?.location && (
+        <div className="profile-meta">
+          <span>📍 {userData.location}</span>
+        </div>
+      )}
+      {userData?.blog && (
+        <div className="profile-meta">
+          <span>🔗 <a href={userData.blog} target="_blank" rel="noopener noreferrer">{userData.blog}</a></span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// 🧠 AI INSIGHTS COMPONENT
+export function AIInsights({ userData = {}, repos = [], theme = "dark" }) {
+  const isLight = theme === "light";
+
+  const generateInsights = () => {
+    const insights = [];
+    
+    // Language insights
+    const languages = new Set(repos.map((r) => r.language).filter(Boolean));
+    if (languages.size > 0) {
+      const topLangs = Array.from(languages).slice(0, 3).join(", ");
+      insights.push(`Proficient in ${topLangs} and ${languages.size > 3 ? `${languages.size - 3} more languages` : 'more'}.`);
+    }
+
+    // Activity insights
+    const recentRepos = repos.filter((r) => {
+      const updated = new Date(r.updated_at);
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      return updated > thirtyDaysAgo;
+    });
+    
+    if (recentRepos.length > 0) {
+      insights.push(`Maintained ${recentRepos.length} repositories in the last month.`);
+    }
+
+    // Stars & Community insight
+    const totalStars = repos.reduce((sum, r) => sum + (r.stargazers_count || 0), 0);
+    if (totalStars > 100) {
+      insights.push(`Projects have received ${totalStars.toLocaleString()} stars, showing strong community recognition.`);
+    } else if (totalStars > 0) {
+      insights.push(`Actively building projects with community engagement.`);
+    }
+
+    // Collaboration insight
+    const totalForks = repos.reduce((sum, r) => sum + (r.forks_count || 0), 0);
+    if (totalForks > 50) {
+      insights.push(`High collaboration level with ${totalForks} forks across projects.`);
+    }
+
+    // Followers insight
+    if (userData?.followers > 1000) {
+      insights.push(`Established developer with ${userData.followers.toLocaleString()} followers.`);
+    } else if (userData?.followers > 100) {
+      insights.push(`Growing presence in the developer community.`);
+    }
+
+    return insights.slice(0, 4);
+  };
+
+  const insights = generateInsights();
+
+  return (
+    <div className={`ai-insights ${isLight ? 'light' : 'dark'}`}>
+      <h3>🧠 AI Analysis</h3>
+      <div className="insights-list">
+        {insights.length > 0 ? (
+          insights.map((insight, idx) => (
+            <div key={idx} className="insight-item">
+              <span className="insight-icon">✨</span>
+              <p>{insight}</p>
+            </div>
+          ))
+        ) : (
+          <p className="no-insights">Not enough data to generate insights yet.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Charts({ userData, repos = [], theme = "dark" }) {
   const languageData = Array.isArray(userData?.languageBreakdown)
     ? userData.languageBreakdown.map((entry) => ({
@@ -330,6 +448,9 @@ export default function Charts({ userData, repos = [], theme = "dark" }) {
 
   return (
     <section className="charts-section">
+      <ProfileCard userData={userData} theme={theme} />
+      <AIInsights userData={userData} repos={repos} theme={theme} />
+
       <div className="score-container">
         <DeveloperScoreCard userData={userData} repos={repos} theme={theme} />
       </div>
