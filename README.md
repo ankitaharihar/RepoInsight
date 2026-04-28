@@ -68,17 +68,17 @@ Default development URLs:
 ## Available Scripts
 
 - Root:
-	- `npm run dev`
-	- `npm run dev:backend`
-	- `npm run dev:frontend`
+  - `npm run dev`
+  - `npm run dev:backend`
+  - `npm run dev:frontend`
 - Backend:
-	- `npm run dev`
-	- `npm start`
+  - `npm run dev`
+  - `npm start`
 - Frontend:
-	- `npm run dev`
-	- `npm run build`
-	- `npm run preview`
-	- `npm run lint`
+  - `npm run dev`
+  - `npm run build`
+  - `npm run preview`
+  - `npm run lint`
 
 ## Environment Variables
 
@@ -120,32 +120,32 @@ Email notification values (optional):
 Main backend routes include:
 
 - Auth:
-	- `GET /auth/config`
-	- `GET /auth/me`
-	- `POST /auth/logout`
-	- `GET /auth/github`
-	- `GET /auth/google`
-	- `GET /auth/github/callback`
-	- `GET /auth/google/callback`
+  - `GET /auth/config`
+  - `GET /auth/me`
+  - `POST /auth/logout`
+  - `GET /auth/github`
+  - `GET /auth/google`
+  - `GET /auth/github/callback`
+  - `GET /auth/google/callback`
 - GitHub data:
-	- `GET /api/github/search/users`
-	- `GET /api/github/:username`
-	- `GET /api/github/:username/repos`
-	- `GET /api/github/:username/activity`
-	- `GET /api/github/:username/languages`
-	- `GET /api/github/:username/insights`
+  - `GET /api/github/search/users`
+  - `GET /api/github/:username`
+  - `GET /api/github/:username/repos`
+  - `GET /api/github/:username/activity`
+  - `GET /api/github/:username/languages`
+  - `GET /api/github/:username/insights`
 - Compatibility routes:
-	- `GET /api/github?username=...`
-	- `GET /api/repos?username=...`
-	- `GET /api/user?q=...`
+  - `GET /api/github?username=...`
+  - `GET /api/repos?username=...`
+  - `GET /api/user?q=...`
 - Billing:
-	- `GET /api/billing/plans`
-	- `GET /api/billing/subscription`
-	- `POST /api/billing/subscription`
-	- `POST /api/billing/checkout-session`
-	- `POST /api/billing/subscription/cancel`
-	- `POST /api/billing/subscription/resume`
-	- `POST /api/billing/stripe/webhook`
+  - `GET /api/billing/plans`
+  - `GET /api/billing/subscription`
+  - `POST /api/billing/subscription`
+  - `POST /api/billing/checkout-session`
+  - `POST /api/billing/subscription/cancel`
+  - `POST /api/billing/subscription/resume`
+  - `POST /api/billing/stripe/webhook`
 
 ## Deployment Notes
 
