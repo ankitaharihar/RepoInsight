@@ -341,7 +341,16 @@
   animation: slideInUp 0.8s ease-out 0.5s both;
 }
 
-.search-wrapper {
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
   margin: 40px auto 0 auto;
   width: 100%;
   max-width: 700px;
@@ -509,28 +518,12 @@
   animation: pulse 2s infinite;
 }
 
-.loading-text:nth-child(1) {
-  animation-delay: 0s;
-}
-
-.loading-text:nth-child(2) {
-  animation-delay: 0.1s;
-}
-
-.loading-text:nth-child(3) {
-  animation-delay: 0.2s;
-}
-
-.loading-text:nth-child(4) {
-  animation-delay: 0.3s;
-}
-
 /* Empty State */
 .empty-state {
   text-align: center;
   padding: 3rem 2rem;
   color: #94a3b8;
-  animation: slideInUp 0.8s ease-out 0.3s both;
+  animation: slideInUp 0.8s ease-out;
 }
 
 .empty-state h3 {
@@ -538,7 +531,6 @@
   color: #cbd5e1;
   margin-bottom: 1rem;
   font-weight: 600;
-  animation: slideInDown 0.8s ease-out 0.4s both;
 }
 
 .empty-state p {
@@ -546,14 +538,12 @@
   line-height: 1.6;
   color: #94a3b8;
   margin-bottom: 2rem;
-  animation: slideInUp 0.8s ease-out 0.5s both;
 }
 
 /* Repo Section */
 .repo-section {
   margin-top: 56px;
   margin-bottom: 2rem;
-  animation: slideInUp 0.8s ease-out 0.4s both;
 }
 
 .repo-section h2 {
@@ -562,7 +552,6 @@
   margin-bottom: 1.5rem;
   font-weight: 600;
   letter-spacing: -0.2px;
-  animation: slideInDown 0.8s ease-out 0.5s both;
 }
 
 .repo-controls {
@@ -604,35 +593,6 @@
   transition: all 0.3s ease;
   position: relative;
   backdrop-filter: blur(4px);
-  animation: slideInUp 0.8s ease-out both;
-}
-
-.repo-card:nth-child(1) {
-  animation-delay: 0.5s;
-}
-
-.repo-card:nth-child(2) {
-  animation-delay: 0.55s;
-}
-
-.repo-card:nth-child(3) {
-  animation-delay: 0.6s;
-}
-
-.repo-card:nth-child(4) {
-  animation-delay: 0.65s;
-}
-
-.repo-card:nth-child(5) {
-  animation-delay: 0.7s;
-}
-
-.repo-card:nth-child(6) {
-  animation-delay: 0.75s;
-}
-
-.repo-card:nth-child(n+7) {
-  animation-delay: calc(0.5s + (var(--index) * 0.05s));
 }
 
 .repo-card.top-repo {
@@ -710,7 +670,6 @@
   margin-bottom: 56px;
   backdrop-filter: blur(4px);
   transition: all 0.3s ease;
-  animation: slideInUp 0.8s ease-out 0.5s both;
 }
 
 .profile-card.light {
@@ -823,7 +782,6 @@
   margin-bottom: 56px;
   backdrop-filter: blur(4px);
   transition: all 0.3s ease;
-  animation: slideInUp 0.8s ease-out 0.55s both;
 }
 
 .ai-insights.light {
@@ -1116,7 +1074,6 @@
   margin-bottom: 1.5rem;
   font-weight: 600;
   letter-spacing: -0.2px;
-  animation: slideInDown 0.8s ease-out 0.5s both;
 }
 
 .charts-grid {
@@ -1132,19 +1089,6 @@
   padding: 2rem;
   transition: all 0.3s ease;
   backdrop-filter: blur(4px);
-  animation: slideInUp 0.8s ease-out 0.55s both;
-}
-
-.chart-card:nth-child(1) {
-  animation-delay: 0.55s;
-}
-
-.chart-card:nth-child(2) {
-  animation-delay: 0.6s;
-}
-
-.chart-card:nth-child(3) {
-  animation-delay: 0.65s;
 }
 
 .chart-card:hover {
