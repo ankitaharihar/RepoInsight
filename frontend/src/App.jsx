@@ -298,7 +298,7 @@ export default function App() {
               <button className="btn-secondary">Setup in under 60 seconds</button>
             </div>
 
-            <div className="search-box-landing">
+              <div className="search-box-landing">
               <div className="search-input-wrap">
                 <input
                   type="text"
@@ -353,7 +353,19 @@ export default function App() {
                   </div>
                 )}
               </div>
-              <button onClick={() => handleAnalyzeAction()} className="btn-primary" disabled>Analyze</button>
+              <button
+                onClick={() => {
+                  if (activeIndex >= 0 && suggestions[activeIndex]) {
+                    handleAnalyzeAction(suggestions[activeIndex].login)
+                    setShowSuggestions(false)
+                  } else {
+                    handleAnalyzeAction()
+                  }
+                }}
+                className="btn-primary"
+              >
+                Analyze
+              </button>
             </div>
             <p className="landing-hint">Get profile score, AI insights, and repo-level analytics in one clean workflow.</p>
             <p className="landing-login-hint">Sign in to unlock search history and full analytics.</p>
@@ -416,7 +428,19 @@ export default function App() {
                   </div>
                 )}
               </div>
-              <button onClick={() => handleAnalyzeAction()} className="btn-primary">Analyze</button>
+              <button
+                onClick={() => {
+                  if (activeIndex >= 0 && suggestions[activeIndex]) {
+                    handleAnalyzeAction(suggestions[activeIndex].login)
+                    setShowSuggestions(false)
+                  } else {
+                    handleAnalyzeAction()
+                  }
+                }}
+                className="btn-primary"
+              >
+                Analyze
+              </button>
             </div>
             {error && <p className="error-message">{error}</p>}
           </div>
