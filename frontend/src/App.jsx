@@ -356,6 +356,18 @@ export default function App() {
           <div className="landing-content">
             <h1>Unlock the Power of RepoInsight</h1>
             <p>Analyze profiles, repos, and developer momentum in seconds, then turn insights into better career and team decisions.</p>
+            <div className="auth-options-hero">
+              {oauthConfig.github ? (
+                <a href={getAuthUrl('github')} className="login-btn">Continue with GitHub</a>
+              ) : (
+                <button className="login-btn disabled" disabled>GitHub not configured</button>
+              )}
+              {oauthConfig.google ? (
+                <a href={getAuthUrl('google')} className="login-btn google-login-btn">Continue with Google</a>
+              ) : (
+                <button className="login-btn google-login-btn disabled" disabled>Google not configured</button>
+              )}
+            </div>
             <div className="landing-buttons">
               <button className="btn-secondary">No credit card required</button>
               <button className="btn-secondary">Cancel anytime</button>
@@ -433,18 +445,6 @@ export default function App() {
             </div>
             <p className="landing-hint">Get profile score, AI insights, and repo-level analytics in one clean workflow.</p>
             <p className="landing-login-hint">Sign in to unlock search history and full analytics.</p>
-            <div className="auth-options-hero">
-              {oauthConfig.github ? (
-                <a href={getAuthUrl('github')} className="login-btn">Continue with GitHub</a>
-              ) : (
-                <button className="login-btn disabled" disabled>GitHub not configured</button>
-              )}
-              {oauthConfig.google ? (
-                <a href={getAuthUrl('google')} className="login-btn google-login-btn">Continue with Google</a>
-              ) : (
-                <button className="login-btn google-login-btn disabled" disabled>Google not configured</button>
-              )}
-            </div>
           </div>
         </div>
       ) : (
