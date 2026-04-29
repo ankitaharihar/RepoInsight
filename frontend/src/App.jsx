@@ -344,6 +344,10 @@ export default function App() {
       {!authUser ? (
         <div className="landing-section">
           <div className="landing-content">
+            <div className="landing-brand">
+              <div className="landing-brand-mark">R</div>
+              <div className="landing-brand-text">RepoInsight</div>
+            </div>
             <h1>Unlock the Power of RepoInsight</h1>
             <p>Analyze GitHub profiles and repositories with a clean, focused workflow.</p>
 
