@@ -1,4 +1,4 @@
-# RepoInsight
+# RepoInsight - Github Profile Analysis
 
 RepoInsight is a full-stack GitHub analytics app with a React (Vite) frontend and an Express backend. It supports OAuth login, profile and repository analysis, activity/insight endpoints, and subscription flows (including Stripe checkout/webhooks).
 
